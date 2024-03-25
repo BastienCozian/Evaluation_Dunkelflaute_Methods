@@ -1,4 +1,5 @@
-# Evaluation_Dunkelflaute_Methods
+# Evaluation and Comparison of Various Dunkelflaute Methods
+Version 1.0
 
 These are the scripts used for evaluating two methods of energy drought detection as part as a TenneT trainee assignment.
 For questions, please refer to benjamin.biewald@tennet.eu
