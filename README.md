@@ -30,3 +30,7 @@ They save the results of the validation as well as validationg plots. These plot
 
 Both scripts are again similar. They load in the preprocessed data, detect energy droughts using the corresponding method and analyse the properties of detected droughts.
 The analysis results are saved (namely a dataframe consiting of all individual points in time that are considered a drought, a datamask that masks drought times as 1 and a dataframe listing all drought events with corresponding properties: Startdate, duration, severity (original by Otero et al. 2022) and adapted severity (by me))
+
+## Dependencies
+
+Use ``conda env create -f environment.yml `` to install this project's dependencies and create a ``dunkelflaute_analysis`` conda-environment.

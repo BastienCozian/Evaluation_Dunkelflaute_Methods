@@ -1,0 +1,18 @@
+name: dunkelflaute_analysis
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - scipy
+  - seaborn
+  - jupyter
+  - ipywidgets>=7.5
+  - ipykernel
+  - pandas
+  - geopandas
+  - xarray
+  - pip
+  - openpyxl
+  #- pip:
+  #  - openpyxl 
