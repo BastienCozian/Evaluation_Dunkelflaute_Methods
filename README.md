@@ -11,7 +11,7 @@ For questions, please refer to benjamin.biewald@tennet.eu
 
 A collection of functions used for several things around Dunkelflaute detection.
 
-- DF_Data_Preprocessing.py`
+- `DF_Data_Preprocessing.py`
 
 Loads all sorts of data and preprocesses it into the unified DataFrame format.
 Do not run the whole script in one go! Some parameters (especially target year "ty") need to be individually assigned before running individual cells.
