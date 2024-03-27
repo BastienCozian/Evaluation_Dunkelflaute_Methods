@@ -195,7 +195,7 @@ for s in range(len(scenarios)):
         sty = 2015
         eny = 2065
         timeframe=str(sty)+'-'+str(eny)
-        mod = scenarios[s][6:] # cut off the 'SP245' as it is not part of the filename
+        mod = scenarios[s][:-6] # cut off the 'SP245' as it is not part of the filename
     
     #index_array = pd.to_datetime(np.arange(np.datetime64(str(sty)+'-01-01'), np.datetime64(str(eny)+'-12-31'), np.timedelta64(1, 'h')))
     index_array = np.empty((eny-sty+1)*(24*365), dtype='datetime64[s]')
