@@ -25,16 +25,16 @@ from Dunkelflaute_function_library import get_daily_values_etm
 
 #%% Specify parameters
 
-path_to_pecd4     = 'D:/PECD4_1/'
-path_to_pecd3     = 'D:/PECD3_1/'
-path_to_etm_d     = 'D:/PECD4_1/ETM_Demand/exports/demand/'
-path_to_eraa23_d  = 'D:/ERAA23/Demand Dataset/'
-path_to_eraa23_ens= 'D:/ERAA23/ENS/'
-path_to_ao_ens    = 'D:/AdequacyOutlook/'
-path_to_pemmdb_c  = 'D:/PEMMDB/data_TY2033/01_PEMMDB/'
-path_to_pemmdb_d  = 'D:/PEMMDB/data_TY2033/04_LOAD/TY2033/'
-path_to_plot      = 'D:/Dunkelflaute/'
-path_to_shapefile = 'D:/PECD4_1/ShapeFiles/General/'
+path_to_pecd4     = 'F:/C3S_PECD_v4.1/'                         #'D:/PECD4_1/'
+path_to_pecd3     = 'F:/PECD3_1/'            #'D:/PECD3_1/'
+path_to_etm_d     = 'F:/Data_Dunkelflaute_analysis/PECD4_ETM_demand/'           #'D:/PECD4_1/ETM_Demand/exports/demand/'
+path_to_eraa23_d  = '' # This data ended up not being used                  #'D:/ERAA23/Demand Dataset/' 
+path_to_eraa23_ens= 'F:/Data_Dunkelflaute_analysis/ERAA23_ENS/'                 #'D:/ERAA23/ENS/'
+path_to_ao_ens    = 'F:/Data_Dunkelflaute_analysis/Adequacy_Outlook_ENS/'      #'D:/AdequacyOutlook/'
+path_to_pemmdb_c  = 'F:/Data_Dunkelflaute_analysis/PEMMDB_Installed_Capacities/' #'D:/PEMMDB/data_TY2033/01_PEMMDB/'
+path_to_pemmdb_d  = 'F:/Data_Dunkelflaute_analysis/PEMMDB_TY2033_demand/'    #'D:/PEMMDB/data_TY2033/04_LOAD/TY2033/'
+path_to_plot      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
+#path_to_shapefile = 'D:/PECD4_1/ShapeFiles/General/' # Not used
 
 # Countries (NUT0) of interest (must be a list of two letter abbreviations)
 countries = ['DE','NL'] # right now only data for DE and NL is certainly available
