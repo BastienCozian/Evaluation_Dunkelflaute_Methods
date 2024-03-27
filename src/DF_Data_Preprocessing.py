@@ -56,7 +56,7 @@ pathways = ['SP245']
 techs = ['SPV', 'WOF', 'WON']#,'TAW'] 
 aggs = ['PEON','PEOF','PEON']#,'SZON'] 
 tech_agg = ['SPV/PEON', 'WOF/PEOF', 'WON/PEON']#, 'TAW/SZON']
-tech_headers = [52, 0, 0]#, 52]
+tech_headers = [52, 52, 52]#, 52]
 tech_ens = ['SPV_','_20','_30']#,'_TAW_'] 
 
 # Target years 
