@@ -71,7 +71,7 @@ scenarios.append('HIST')
 scen_colors.append('forestgreen')                                                       
 for p in range(len(pathways)):
     for m in range(len(models)):
-        scenarios.append(pathways[p]+'/'+models[m])
+        scenarios.append(models[m]+'/'+pathways[p])
         scen_colors.append(model_colors[m]) 
     
 scen_names=[]
