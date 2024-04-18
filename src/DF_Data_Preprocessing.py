@@ -63,7 +63,7 @@ tech_ens = ['SPV_','_20','_30']#,'_TAW_']
 # PECD3.1: 2033 (for PEMMDB demand data only 2033 is available!)
 # PECD4.1: 2030, 2040 or 2050 (demand data for only these years is available)
 # PEMMDB installed capacity data is availale for 2022, 2025, 2027, 2030, 2033, 2040 & 2050
-ty = 2030
+ty = 2050 # 2030
 
 scenarios = []
 scen_colors = []

@@ -29,9 +29,10 @@ from matplotlib.ticker import MaxNLocator
 
 #%% Specify parameters
 
-path_to_data      = 'D:/Dunkelflaute/Data/'
-path_to_plot      = 'D:/Dunkelflaute/'
-path_to_shapefile = 'D:/PECD4_1/ShapeFiles/General/'
+
+path_to_data      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/Data/'  #'D:/Dunkelflaute/Data/'
+path_to_plot      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
+#path_to_shapefile = 'D:/PECD4_1/ShapeFiles/General/'
 plot_format       = 'png'
 
 # Countries (NUT0) of interest (must be a list of two letter abbreviations)
@@ -39,7 +40,7 @@ countries = ['DE','NL']
 
 # Target Years
 ty_pecd3 = 2033
-ty_pecd4 = 2050
+ty_pecd4 = 2030
 
 # Percentile thresholds & capacity reference year from Otero et al. 2022
 # Paper used 0.1 and 0.9, validation yielded 0.01 and 0.99 / 0.98 as best fits
@@ -74,7 +75,7 @@ scenarios.append('HIST')
 scen_colors.append('forestgreen')                                                       
 for p in range(len(pathways)):
     for m in range(len(models)):
-        scenarios.append(pathways[p]+'/'+models[m])
+        scenarios.append(models[m]+'/'+pathways[p])
         scen_colors.append(model_colors[m]) 
     
 scen_names=[]
