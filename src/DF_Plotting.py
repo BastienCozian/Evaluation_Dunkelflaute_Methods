@@ -26,8 +26,8 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
 
 #%% Specify parameters
-path_to_data = 'D:/Dunkelflaute/Data/'
-path_to_plot = 'D:/Dunkelflaute/'
+path_to_data      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/Data/'  #'D:/Dunkelflaute/Data/'
+path_to_plot      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
 plot_format  = 'png'
 
 droughttypes = ['LWS', 'RL', 'DD', 'CF']
@@ -79,7 +79,7 @@ scenarios.append('HIST')
 scen_colors.append('forestgreen')                                                       
 for p in range(len(pathways)):
     for m in range(len(models)):
-        scenarios.append(pathways[p]+'/'+models[m])
+        scenarios.append(models[m]+'/'+pathways[p])
         scen_colors.append(model_colors[m]) 
     
 scen_names=[]

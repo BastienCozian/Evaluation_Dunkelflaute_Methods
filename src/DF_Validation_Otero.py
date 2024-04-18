@@ -21,9 +21,8 @@ from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
 
 #%% Set parameters
-
-path_to_data      = 'D:/Dunkelflaute/Data/'
-path_to_plot      = 'D:/Dunkelflaute/'
+path_to_data      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/Data/'  #'D:/Dunkelflaute/Data/'
+path_to_plot      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
 plot_format       = 'png'
 
 # Countries (NUT0) of interest (must be a list of two letter abbreviations)

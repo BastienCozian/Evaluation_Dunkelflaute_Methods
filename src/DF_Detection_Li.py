@@ -24,8 +24,8 @@ from matplotlib.ticker import MaxNLocator
 
 #%% Specify Parameters
 
-path_to_data      = 'D:/Dunkelflaute/Data/'
-path_to_plot      = 'D:/Dunkelflaute/'
+path_to_data      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/Data/'  #'D:/Dunkelflaute/Data/'
+path_to_plot      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
 plot_format       = 'png'
 
 # Capacity Factor Threshold for all technologies (see Li et al. 2021)
@@ -54,7 +54,7 @@ scenarios.append('HIST')
 scen_colors.append(hist4_color)                                               
 for p in range(len(pathways)):
     for m in range(len(models)):
-        scenarios.append(pathways[p]+'/'+models[m])
+        scenarios.append(models[m]+'/'+pathways[p])
         scen_colors.append(model_colors[m]) 
     
 scen_names=[]
