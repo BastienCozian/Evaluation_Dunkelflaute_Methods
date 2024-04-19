@@ -30,7 +30,7 @@ plot_format       = 'png'
 countries = ['DE','NL']
 
 # ENS Data (which data to use?)
-ens_dataset = 'AO' # 'AO' or 'ERAA23'
+ens_dataset = 'ERAA23' # 'AO' or 'ERAA23'
 # Adequacy Outlook Scenario
 ao_scen = 'W.v8' # 'W.v8' or 'S.v6' for either wind or solar dominated scenario (only if ens_dataset='AO')
 
