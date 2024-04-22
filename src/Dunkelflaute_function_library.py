@@ -145,7 +145,7 @@ def get_df_timerange(df, start_date_a, end_date_a):
 
 def get_f_score(ens_mask_d, df_mask_d, beta=1):
     # df_mask_d = DataFrame with masked data of daily Dunkelflauten (0=no DF,  1=DF)
-    # df_mask_d = DataFrame with masked data of ENS (0=no ENS, 2=ENS)
+    # ens_mask_d = DataFrame with masked data of ENS (0=no ENS, 2=ENS)
     # beta = weight of recall (how much more important is detecting accuracy in detecting DF (less missing out) over false alarming)
     
     # Procedure:
