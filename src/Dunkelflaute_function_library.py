@@ -168,7 +168,6 @@ def get_f_score(ens_mask_d, df_mask_d, beta=1):
     # precision = ratio of true positives over all positives (how many events are wrongly detected?)
     # recall = ratio of true positives over true positive+false negatives (how many events are missed out?)
     
-    
     data = [f, true_positive, false_negative, false_positive, true_negative]
     result_df = pd.DataFrame(index=['F','TP','FN','FP','TN'], columns=f.index.values, data=data)
     
