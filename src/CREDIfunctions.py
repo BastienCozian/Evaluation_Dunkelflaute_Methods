@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Feb 17 12:21:57 2023
+Created on Mon Apr 22 17:21:57 2024
 
-@author: Laurens P. Stoop
+@author: Bastien Cozian
 
+Adapted from L.P. Stoop
 See: https://github.com/laurensstoop/CREDI
 """
 
@@ -15,255 +16,209 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
 import math
-# import scipy as sp
-import scipy.fftpack as fftpack
-from copy import deepcopy
-
-#%%
-# =============================================================================
-# Functional definition of climatology based on the Modified Ordinal Day
-# =============================================================================
-"""
-Based on: https://github.com/royalosyin/Python-Practical-Application-on-Climate-Variability-Studies/blob/master/ex31-Harmonic%20Analysis%20-%20Monthly%20Mean%20Temperature%20at%20Orange%2C%20Australia.ipynb
-"""
-
-# we want a function of climatology in which the 29t of february is counted correctly
-def Climatology_MOD(InputDataSet, SelectedZone):
-
-    # Method to get a neat definition of the day of the year, based on https://github.com/pydata/xarray/issues/1844#issuecomment-418188977
-    not_leap_year = xr.DataArray(~InputDataSet.indexes['time'].is_leap_year, coords=InputDataSet.coords)
-    march_or_later = InputDataSet.time.dt.month >= 3
-    ordinal_day = InputDataSet.time.dt.dayofyear
-    modified_ordinal_day = ordinal_day + (not_leap_year & march_or_later)
-    modified_ordinal_day = modified_ordinal_day.rename('ModifiedOrdinalDay')
-    
-    # we can use this new modified ordinal day definition to get the correct climatology
-    OutputDataArray = InputDataSet[SelectedZone].groupby(modified_ordinal_day).mean('time')
-    
-    # Now we return the output dataset that provides the anomaly 
-    return OutputDataArray, modified_ordinal_day
-
-
-# we want a function of climatology in which the 29t of february is counted correctly
-def Climatology_MOH(InputDataSet, SelectedZone):
-
-    # Method to get a neat definition of the day of the year, based on https://github.com/pydata/xarray/issues/1844#issuecomment-418188977
-    not_leap_year = xr.DataArray(~InputDataSet.indexes['time'].is_leap_year, coords=InputDataSet.coords)
-    march_or_later = InputDataSet.time.dt.month >= 3
-    ordinal_hour = InputDataSet.time.dt.dayofyear * 24 + InputDataSet.time.dt.hour - 24
-    modified_ordinal_hour = ordinal_hour + (not_leap_year & march_or_later)
-    modified_ordinal_hour = modified_ordinal_hour.rename('ModifiedOrdinalHour')
-    
-    # we can use this new modified ordinal day definition to get the correct climatology
-    OutputDataArray = InputDataSet[SelectedZone].groupby(modified_ordinal_hour).mean('time')
-    
-    # Now we return the output dataset that provides the anomaly 
-    return OutputDataArray, modified_ordinal_hour
-
-# we want a function of climatology in which the 29t of february is counted correctly
-def Climatology_Hourly(InputDataSet, SelectedZone):
-
-    ordinal_hour = InputDataSet.time.dt.dayofyear * 24 + InputDataSet.time.dt.hour - 24
-    ordinal_hour = ordinal_hour.rename('OrdinalHour')
-
-    
-    # we can use this new modified ordinal day definition to get the correct climatology
-    OutputDataArray = InputDataSet[SelectedZone].groupby(ordinal_hour).mean('time')
-    
-    # Now we return the output dataset that provides the anomaly 
-    return OutputDataArray, ordinal_hour
-
-
-# we want a function of in which the 29t of february is counted correctly
-def Climatology_MOD_Rolling(InputDataSet, SelectedZone='none', RollingWindow=1008):
-
-    # Method to get a neat definition of the day of the year, based on https://github.com/pydata/xarray/issues/1844#issuecomment-418188977
-    not_leap_year = xr.DataArray(~InputDataSet.indexes['time'].is_leap_year, coords=InputDataSet.coords)
-    march_or_later = InputDataSet.time.dt.month >= 3
-    ordinal_day = InputDataSet.time.dt.dayofyear
-    modified_ordinal_day = ordinal_day + (not_leap_year & march_or_later)
-    modified_ordinal_day = modified_ordinal_day.rename('ModifiedOrdinalDay')
-    
-    # For the requested zone, we take the rolling centroid mean of 42 days (1008 hours)
-    if SelectedZone == 'none':
-        OutputDataArray = InputDataSet.rolling(time=RollingWindow,center=True).mean()
-    else:
-        OutputDataArray = InputDataSet[SelectedZone].rolling(time=RollingWindow,center=True).mean()
-    
-    # On this smooth data we determine the climatology
-    OutputDataArray = OutputDataArray.groupby(modified_ordinal_day).mean('time')
-    
-
-    return OutputDataArray, modified_ordinal_day
-
-
-
-# we want a function of climatology in which the 29t of february is counted correctly
-def Climatology_MOH_Rolling(InputDataSet, SelectedZone, RollingWindow=1008):
-
-    # Method to get a neat definition of the day of the year, based on https://github.com/pydata/xarray/issues/1844#issuecomment-418188977
-    not_leap_year = xr.DataArray(~InputDataSet.indexes['time'].is_leap_year, coords=InputDataSet.coords)
-    march_or_later = InputDataSet.time.dt.month >= 3
-    ordinal_hour = InputDataSet.time.dt.dayofyear * 24 + InputDataSet.time.dt.hour - 24
-    modified_ordinal_hour = ordinal_hour + (not_leap_year & march_or_later)
-    modified_ordinal_hour = modified_ordinal_hour.rename('ModifiedOrdinalHour')
-    
-    
-    results = []
-    for label, group in InputDataSet[SelectedZone].groupby(InputDataSet[SelectedZone].time.dt.hour):
-        results.append(group.rolling(time=RollingWindow,center=True).mean())
-    OutputDataArray = xr.merge(results)
-    
-    
-    # On this smooth data we determine the climatology
-    OutputDataArray = OutputDataArray[SelectedZone].groupby(modified_ordinal_hour).mean('time')
-    
-    
-    # Now we return the output dataset that provides the anomaly 
-    return OutputDataArray, modified_ordinal_hour
-
-
-# we want a function of climatology in which the 29t of february is counted correctly
-def Climatology_Hourly_Rolling(InputDataSet, SelectedZone, RollingWindow=1008):
-
-    ordinal_hour = InputDataSet.time.dt.dayofyear * 24 + InputDataSet.time.dt.hour - 24
-    ordinal_hour = ordinal_hour.rename('OrdinalHour')
-    
-    results = []
-    for label, group in InputDataSet[SelectedZone].groupby(InputDataSet[SelectedZone].time.dt.hour):
-        results.append(group.rolling(time=RollingWindow,center=True).mean())
-    OutputDataArray = xr.merge(results)
-    
-    
-    # On this smooth data we determine the climatology
-    OutputDataArray = OutputDataArray[SelectedZone].groupby(ordinal_hour).mean('time')
-    
-    
-    # Now we return the output dataset that provides the anomaly 
-    return OutputDataArray, ordinal_hour
-
-
-# we want a function of just the ordinal hour
-def Ordinal_Hour(InputDataSet):
-
-    ordinal_hour = InputDataSet.time.dt.dayofyear * 24 + InputDataSet.time.dt.hour - 24
-    ordinal_hour = ordinal_hour.rename('OrdinalHour')
-    
-    # Now we return the output dataset that provides the anomaly 
-    return ordinal_hour
-
-
 
 
 #%%
 # =============================================================================
-# Helper functions for the fourier transforms
+# Definition of climatology based on the Modified Ordinal Day
 # =============================================================================
-# """
-# The following codes are extracted and modified from
-# Author:       Damien Irving, irving.damien@gmail.com
-# Description:  Calculate Fourier transform
-# """
 
 
-
-def fourier_transform(signal, spacing):
-    """Calculate the Fourier Transform.
-    
-    Args:
-      signal (numpy.ndarray): Data to be transformed 
-      spacing (scaler): sampling resolution
-    
-    Returns:
-      sig_fft (numpy.ndarray): Coefficients obtained from the Fourier Transform
-      freqs (numpy.ndarray): Wave frequency associated with each coefficient
-    
-    """        
-    sig_fft = fftpack.fft(signal)
-    sample_freq = fftpack.fftfreq(len(signal), d=spacing) * len(signal) * spacing  #units = cycles per length of domain
-    sample_freq = np.resize(sample_freq, sig_fft.shape)
-    
-    return sig_fft, sample_freq
-    
-def spectrum(signal_fft, freqs, scaling='amplitude', variance=None):
-    """Calculate the spectral density for a given Fourier Transform.
-    
-    Args:
-      signal_fft, freqs (numpy.ndarray): Typically the output of fourier_transform()
-      scaling (str, optional): Choices for the amplitude scaling for each frequency
-        are as follows (see Wilks 2011, p440):
-         'amplitude': no scaling at all (C)
-         'power': sqaure the amplitude (C^2)
-         'R2': variance explained = [(n/2)*C^2] / (n-1)*variance^2, 
-         where n and variance are the length and variance of the 
-         orignal data series (R2 = the proportion of the variance 
-         explained by each harmonic)    
+def Modified_Ordinal_Hour(InputDataSet):
     """
+    Compute the (modified) ordinal hour.
+    
+    Adapted from @author Laurens P. Stoop
+    https://github.com/laurensstoop/CREDI
 
-    assert scaling in ['amplitude', 'power', 'R2']
-    if scaling == 'R2':
-        assert variance, \
-        "To calculate variance explained must provide variance value" 
+    Parameters
+    ----------
+    InputDataSet : Xarray DataSet
+        Feb 29th is (should be?) removed from the timeseries.
+        Note: The index is "Date" (not "time").
+        Example:
+
+        Dimensions:  (Date: 12775)
+        Coordinates:
+        * Date     (Date) datetime64[ns] 1982-01-01 1982-01-02 ... 2016-12-31
+        Data variables:
+            DE00     (Date) float64 1.277e+06 1.368e+06 ... 9e+05 5.759e+05
+            NL00     (Date) float64 4.878e+05 4.295e+05 ... 3.333e+05 3.558e+05
+
+    Returns
+    -------
+    OutputDataSet: Xarray DataArray
+        Ordinal hour (from 0 to 24*365)
+        Example:
+
+        <xarray.DataArray 'ModifiedOrdinalHour' (Date: 12775)> Size: 102kB
+        array([   0,   24,   48, ..., 8712, 8736, 8760], dtype=int64)
+        Coordinates:
+        * Date     (Date) dateDate64[ns] 102kB 1982-01-01 1982-01-02 ... 2016-12-31
+               
+    """
+    
+    """
+    ordinal_hour = InputDataSet.Date.dt.dayofyear * 24 + InputDataSet.Date.dt.hour - 24
+    ordinal_hour = ordinal_hour.rename('OrdinalHour')
+    """
+    # Problem: if we define ordinal hour as above, it is based on dayofyear, where dayofyear=31+29 is 
+    # 29th of February on leap year 31th March on non-leap year. This implies that 31st December is
+    # dayofyear=366 on leap years and 365 on non-leap years, even if 29th was removed from the Dateseries. 
+    # Solution: modify dayofyear to correctly average the same calendar date when grouping by ordinal hours. 
+    is_leap_year = xr.DataArray(InputDataSet.indexes['Date'].is_leap_year, coords=InputDataSet.coords)
+    march_or_later = InputDataSet.Date.dt.month >= 3
+    ordinal_hour = InputDataSet.Date.dt.dayofyear * 24 + InputDataSet.Date.dt.hour - 24
+    modified_ordinal_hour = ordinal_hour - (is_leap_year & march_or_later) * 24            # Changed wrt L.P. Stoop's code
+    modified_ordinal_hour = modified_ordinal_hour.rename('ModifiedOrdinalHour')
+    
+    # Now we return the output dataset that provides the anomaly 
+    return modified_ordinal_hour
+
+
+# we want a function of climatology in which the 29t of february is counted correctly
+def Climatology_Hourly(InputDataSet):
+
+    modified_ordinal_hour = Modified_Ordinal_Hour(InputDataSet)
+    
+    # we can use this new modified ordinal day definition to get the correct climatology
+    OutputDataSet = InputDataSet.groupby(modified_ordinal_hour).mean('Date')
+    
+    return OutputDataSet
+
+
+def Climatology_Hourly_Rolling(InputDataSet, RollingWindow=40):
+    """
+    Compute the climatology with an Hourly Rolling Window (HRW) [1].
+    It is a physically-based method to compute the climatology which properly accounts for 
+    relevant (hourly to annual) timescales in the electricity sector. 
+    
+    Adapted from @author Laurens P. Stoop
+    https://github.com/laurensstoop/CREDI
+
+    Parameters
+    ----------
+    InputDataSet : Xarray DataSet
+        Hourly timeseries of energy variable (RES, DD, RL, CF, etc.). Contains one or multiple zones (e.g. DE00, NL00).
+        Note: The index is "Date" (not "time").
+        Example:
+
+        Dimensions:  (Date: 12775)
+        Coordinates:
+        * Date     (Date) datetime64[ns] 1982-01-01 1982-01-02 ... 2016-12-31
+        Data variables:
+            DE00     (Date) float64 1.277e+06 1.368e+06 ... 9e+05 5.759e+05
+            NL00     (Date) float64 4.878e+05 4.295e+05 ... 3.333e+05 3.558e+05
+
+    RollingWindow : int
+        Size of the rolling window (in DAYS)
+
+    Returns
+    -------
+    OutputDataSet: Xarray DataSet
+        Example:
+
+        Dimensions:              (ModifiedOrdinalHour: 365)
+        Coordinates:
+        * ModifiedOrdinalHour  (ModifiedOrdinalHour) int64 0 24 48 ... 8736 8760
+        Data variables:
+            DE00                 (ModifiedOrdinalHour) float64 8.265e+05 ... 8.37...
+            NL00                 (ModifiedOrdinalHour) float64 3.378e+05 ... 3.39
         
-    if len(signal_fft.shape) > 1:
-        print("WARNING: Ensure that frequency is the final axis")
-    
-    # Calculate the entire amplitude spectrum
-    n = signal_fft.shape[-1]
-    amp = np.abs(signal_fft) / n
-    
-    # The positive and negative half are identical, so just keep positive
-    # and double its amplitude
-    freq_limit_index = int(math.floor(n / 2)) 
-    pos_amp = 2 * np.take(amp, range(1, freq_limit_index), axis=-1)
-    pos_freqs = np.take(freqs, range(1, freq_limit_index), axis=-1)
-    
-    if scaling == 'amplitude':
-        result = pos_amp
-    elif scaling == 'power':
-        result = (pos_amp)**2
-    elif scaling == 'R2':
-        result = ((n / 2) * (pos_amp**2)) / ((n - 1) * (variance))
-    
-    return result, pos_freqs
-    
-    
-def inverse_fourier_transform(coefficients, sample_freq, 
-                              min_freq=None, max_freq=None, exclude='negative'):
-    """Inverse Fourier Transform.
-    
-    Args:
-      coefficients (numpy.ndarray): Coefficients obtained from the Fourier Transform
-      sample_freq (numpy.ndarray): Wave frequency associated with each coefficient
-      max_freq, min_freq (float, optional): Exclude values outside [min_freq, max_freq]
-        frequency range. (Note that this filtering keeps both the positive and 
-        negative half of the spectrum)
-      exclude (str, optional): Exclude either the 'positive' or 'negative' 
-        half of the Fourier spectrum. (A Hilbert transform, for example, excludes 
-        the negative part of the spectrum)
-                                 
+    modified_ordinal_hour: Xarray DataArray
+            See function Modified_Ordinal_Hour.
+            
+    References
+    ----------
+    .. [1] Laurens P. Stoop et al., The Climatological Renewable Energy Deviation Index (Credi),
+       Environ. Res. Lett. 19 (2024).
     """
+    modified_ordinal_hour = Modified_Ordinal_Hour(InputDataSet)
+
+    # Average the hours (e.g. 1pm) from ~ day - 20 days to + 20 days
+    results = []
+    for _, group in InputDataSet.groupby(InputDataSet.Date.dt.hour):
+        results.append(group.rolling(Date=RollingWindow, center=True).mean())
+
+    OutputDataSet = xr.merge(results)
+
+    # On this smooth data we determine the climatology
+    OutputDataSet = OutputDataSet.groupby(modified_ordinal_hour).mean('Date')
+
+    # Now we return the output dataset that provides the anomaly 
+    return OutputDataSet, modified_ordinal_hour
+
+
+def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9):
+    """
+    Compute the climatology with an Hourly Weekly Rolling Window (HWRW).
+    It is an adaptation of the Hourly Rolling Window (HRW) [1]. 
+    This method with HWRW averages the values of the same hour and day of the week
+    (e.g. Monday 1st Jan 13:00, Monday 8th Jan 13:00, Monday 15th Jan 13:00 for a RollingWindow=3) 
+    while the method with HRW averages the same hour the day with the same hour of the surrounding days 
+    (e.g. Monday 1st Jan 13:00, Tuesday 2nd Jan 13:00, Wednesday 3rd Jan 13:00 for a RollingWindow=3).
+
+    The use of HRW is physically-based to compute the climatology of energy variables which properly 
+    accounts for relevant (hourly to annual) timescales.
+    This HWRW methods additionaly account for the weekly cycle, which is relevant particularly for 
+    electricity demand (and other variables based on demand such as residual load) which has a clear weekly cycle.
     
-    assert exclude in ['positive', 'negative', None]
-    
-    coefs = deepcopy(coefficients)  # Deep copy to prevent side effects
-                                    # (shallow copy not sufficient for complex
-                                    # things like numpy arrays)
-    
-    if exclude == 'positive':
-        coefs[sample_freq > 0] = 0
-    elif exclude == 'negative':
-        coefs[sample_freq < 0] = 0
-    
-    if (max_freq == min_freq) and max_freq:
-        coefs[np.abs(sample_freq) != max_freq] = 0
-    
-    if max_freq:
-        coefs[np.abs(sample_freq) > max_freq] = 0
-    
-    if min_freq:
-        coefs[np.abs(sample_freq) < min_freq] = 0
-    
-    result = fftpack.ifft(coefs)
-    
-    return result    
+    Adapted by B. Cozian from Laurens P. Stoop
+    https://github.com/laurensstoop/CREDI
+
+    Parameters
+    ----------
+    InputDataSet : Xarray DataSet
+        Hourly timeseries of energy variable (RES, DD, RL, CF, etc.). Contains one or multiple zones (e.g. DE00, NL00).
+        Note: The index is "Date" (not "time").
+        Example:
+
+        Dimensions:  (Date: 12775)
+        Coordinates:
+        * Date     (Date) datetime64[ns] 1982-01-01 1982-01-02 ... 2016-12-31
+        Data variables:
+            DE00     (Date) float64 1.277e+06 1.368e+06 ... 9e+05 5.759e+05
+            NL00     (Date) float64 4.878e+05 4.295e+05 ... 3.333e+05 3.558e+05
+
+    RollingWindow : int
+        Size of the rolling window (in WEEKS)
+        If RollingWindow == 3, returns the mean of w-1, w, and w+1.
+        If RollingWindow == 4, returns the mean of w-1, w-2, w, w+1.
+
+    Returns
+    -------
+    OutputDataSet: Xarray DataSet
+        Example:
+
+        Dimensions:              (ModifiedOrdinalHour: 365)
+        Coordinates:
+        * ModifiedOrdinalHour  (ModifiedOrdinalHour) int64 0 24 48 ... 8736 8760
+        Data variables:
+            DE00                 (ModifiedOrdinalHour) float64 8.265e+05 ... 8.37...
+            NL00                 (ModifiedOrdinalHour) float64 3.378e+05 ... 3.39
+        
+    modified_ordinal_hour: Xarray DataArray
+            See function Modified_Ordinal_Hour.
+            
+    References
+    ----------
+    .. [1] Laurens P. Stoop et al., The Climatological Renewable Energy Deviation Index (Credi),
+       Environ. Res. Lett. 19 (2024).
+    """
+    modified_ordinal_hour = Modified_Ordinal_Hour(InputDataSet)
+
+    results = []
+    df_hours = InputDataSet.Date.dt.hour.to_pandas()
+    df_dayofweek = InputDataSet.Date.dt.dayofweek.to_pandas()
+    # Average for values with the same hour and dayofweek
+    # Need to use Pandas' .groupby() because Xarray's .groupby() does not allow to easily use two groups.
+    for _, group in InputDataSet.to_pandas().groupby([df_hours, df_dayofweek]):
+        results.append(group.to_xarray().rolling(Date=RollingWindow, center=True).mean())
+
+    OutputDataSet = xr.merge(results)
+
+    # On this smooth data we determine the climatology
+    OutputDataSet = OutputDataSet.groupby(modified_ordinal_hour).mean('Date')
+
+    # Now we return the output dataset that provides the anomaly 
+    return OutputDataSet, modified_ordinal_hour
