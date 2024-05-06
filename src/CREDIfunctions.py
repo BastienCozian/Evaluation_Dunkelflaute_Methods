@@ -231,18 +231,13 @@ def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9):
 
 
 
-def get_CREDI_threshold(df_data, zone, percentile=0.05, extreme_is_high=True, PERIOD_length_days=1, PERIOD_cluster_days=1, 
-                        start_date='1982-01-01', end_date='2016-12-31'):
+def get_CREDI_events(df_data, zone, extreme_is_high=True, PERIOD_length_days=1, PERIOD_cluster_days=1,
+                     start_date='1982-01-01', end_date='2016-12-31', climatology='HRW'):
     """
     Compute the Climatological Renewable Energy Deviation Index (CREDI) [1]. 
-    Currently, CREDI is by default computed based on Hourly Rolling Window (HWRW). See function `Climatology_Hourly_Rolling`.
-
-    In the future, CREDI would also be computed based on Hourly Weekly Rolling Window (HWRW). 
-    See function `Climatology_Hourly_Weekly_Rolling`.
-
-    TODO: Finish Description
-
-    TODO: modify the quantile method "interpolation='nearest' " following the Pandas' Warning message.
+    CREDI is by default computed based on Hourly Rolling Window (HRW, see function `Climatology_Hourly_Rolling`)
+    but can be computed based on Hourly Weekly Rolling Window (HWRW, not fully implemented yet, 
+    see function `Climatology_Hourly_Weekly_Rolling`).
 
     TODO: add the possibility to use "start_date" and "end_date". Apparently I first need to correct an issue in the code of Ben, 
     but I can't remember what...
@@ -250,38 +245,66 @@ def get_CREDI_threshold(df_data, zone, percentile=0.05, extreme_is_high=True, PE
     (the more data, the smoother) but this need to be accounted for when e.g. computing the percentile valye.
     Moreover, this may not be appropriate when looking at at projection data when we want only e.g. the 2015-2045 period.
 
-    TODO: change the code to apply the percentile outside the function (otherwize I need to compute CREDI for each percentile!)
-    
-    TODO: Add the option to use the Hourly Weekly Rolling Window (HWRW) when it is properly implemented.
-
     Parameters
     ----------
-    df_data : Xarray DataFrame
+    df_data : DataFrame
+        Input energy variable (Residual load, demand, or wind and solar production).
 
-    percentile : float
+        Example:
+                                    DE00          NL00
+        Date                                           
+        1982-01-01 00:00:00  20618.535429  18246.572745
+        1982-01-01 01:00:00  21718.368473  18091.074620
+
+    zone : str
+        Spatial zone, which generally correspond to a SZON (bidding zone) 
+        possibly aggregated from PZON zones (see DF_Data_Preprocessing.py).
+        Example: 'DE00', 'NL00'
 
     PERIOD_length_days: int
+        Duration of CREDI events.
 
     PERIOD_cluster_days: int
         Period used to cluster events, i.e. to differentiate/partly exclude overlapping events.
+        A 20-25% overlap is accepted (e.g. PERIOD_length_days=4 and PERIOD_cluster_days=3).
 
     start_date: date in format 'yyyy-mm-dd'
 
     end_date: date in format 'yyyy-mm-dd'
 
-    empirical: bool
-        Quantile estimation method.
+    climatology: str
+        Method to compute the climatology. 
+        3 choices: HRW (Hourly Rolling Window), HWRW (Hourly Weekly Rolling Window), and empirical.
+        The HWRW is not fully implemented yet.
 
     Returns
     -------
 
-    ds_CREDI_event
+    ds_CREDI_event : DataFrame
+        CREDI value at the end of the event. It is the cummulative sum of anomalies (wrt climatology) 
+        over the duration of the event.
+
+        Exemple:
+                    ModifiedOrdinalHour          DE00           NL00
+        Date                                                        
+        1982-01-01                    0 -1.536445e+02    4171.817640
+        1982-01-02                   24  4.845000e+05  155744.196369
     
-    threshold 
-    
-    event_dates 
-    
-    event_values
+    event_dates : list of Timestamp
+        Date of CREDI events ranked in decreasing (resp. increasing) order of the CREDI value 
+        for residual load and demand (resp. renewable energy production).
+        Note that a 3-day CREDI event at date 1982-01-04 is actually the average 
+        from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
+
+        Example: 
+        [Timestamp('2015-01-21 00:00:00'),
+         Timestamp('1997-12-23 00:00:00'),
+         ...
+        ]
+
+    event_values : list
+        CREDI values  ranked in decreasing (resp. increasing) order for residual load and demand 
+        (resp. renewable energy production).
 
             
     References
@@ -300,12 +323,20 @@ def get_CREDI_threshold(df_data, zone, percentile=0.05, extreme_is_high=True, PE
     # Set the data + hourly climatology
     ds_data = df_data.to_xarray()
 
-    #ds_clim_hourly = Climatology_Hourly(ds_data)
-    ds_clim_HRW, MOH = Climatology_Hourly_Rolling(ds_data, RollingWindow=40)
-    ds_anom_HRW = ds_data.groupby(MOH) - ds_clim_HRW
+    if climatology == 'HRW':
+        ds_clim_HRW, MOH = Climatology_Hourly_Rolling(ds_data, RollingWindow=40)
+        ds_anom = ds_data.groupby(MOH) - ds_clim_HRW
+    elif climatology == 'HWRW':
+        ds_clim_HWRW, MOH = Climatology_Hourly_Weekly_Rolling(ds_data, RollingWindow=9)
+        ds_anom = ds_data.groupby(MOH) - ds_clim_HWRW
+        print("The HWRW method is not properly implemented yet.")
+    elif climatology == 'empirical':
+        ds_anom = ds_data - Climatology_Hourly(ds_data)
+    else:
+        raise KeyError("Choose a method to compute climatology among 'HRW', 'HWRW' and 'empirical.")
 
     # Compute the cummulative sum over all hours
-    ds_CREDI = ds_anom_HRW.rolling(Date=PERIOD_length).construct(Date="event_hour", stride=PERIOD_stride).cumsum(dim='event_hour')
+    ds_CREDI = ds_anom.rolling(Date=PERIOD_length).construct(Date="event_hour", stride=PERIOD_stride).cumsum(dim='event_hour')
 
     # Generate dataset of last event hours to get one T-day average per day
     ds_CREDI_event = ds_CREDI.sel(event_hour=PERIOD_length-1).to_pandas()
@@ -332,23 +363,21 @@ def get_CREDI_threshold(df_data, zone, percentile=0.05, extreme_is_high=True, PE
         ds_CREDI_sort_event = ds_CREDI_sort_event.drop(ds_CREDI_sort_event.loc[(abs(ds_CREDI_sort_event.index - ds_CREDI_sort_event.index[0]) < dtime.timedelta(PERIOD_cluster_days))].index)
 
 
-    # Percentile is computed on the clustered events ("independent" events)
-    # interpolation="nearest" gives the same result as Benjamin B.'s "empirical=True"
-    # in the function "get_thresholds"
-    threshold = np.quantile(event_values, q=percentile, interpolation="nearest")
-
-    return ds_CREDI_event, threshold, event_dates, event_values
+    return ds_CREDI_event, event_dates, event_values
 
 
 
 def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, beta=1):
     """
-    Make sure that 2 successive ENS in the same event are counted as one.
+    Compute the F-score for CREDI events.
+    We consider that a CREDI event is successfully detected an ENS (true positive) if at least one ENS occur during 
+    the `PERIOD_length_days`-day-long CREDI event.
 
     The date of the CREDI events in df_mask are shifted by one day. 
-    Indeed, currently a 3-day CREDI event indexed at day 1982-01-04 is actually the average of 1982-01-01, 1982-01-02, and 1982-01-03.
+    Indeed, a 3-day CREDI event indexed at day 1982-01-04 is actually the average from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
 
-    TODO: Finish description
+
+    TODO: Make sure that 2 successive ENS in the same event are counted as one.
 
     TODO: make a proper choice to use a single zone or multiple zone. Currently no choice is made.
 
@@ -357,23 +386,53 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, beta=1):
     TODO: Not sure of the computation of true_negative, need to think more. Do not affect the computation of F-score. 
     Use len(same_index) or number of DF events ?
 
+    TODO: implement the case where PERIOD_length_days != PERIOD_cluster_days
+
     Parameters
     ----------
-    ens_mask : Xarray DataFrame
+    ens_mask : DataFrame
+        Value = 2 if ENS, 0 otherwize.
+
+        Example:
+                    DE00  NL00
+        Date                  
+        1982-01-01     0     0
+        1982-01-02     2     0
     
-    df_data : Xarray DataFrame
+    df_mask : DataFrame
+        Value = 1 if detected energy drought, 0 otherwize.
+    
+        Example:
+                    DE00
+        Date            
+        1982-01-01     0
+        1982-01-02     1
 
     zone : str
         e.g. "DE00", "NL00"
 
     PERIOD_length_days: int
+        Duration of CREDI events.
 
     beta : float
+        Relative weight of precision and recall.
 
     Returns
     -------
 
     result_df : DataFrame
+        DataFrame containing the results (F-score, true positive, false negative, 
+        false positive, true negative, precision, recall).
+    
+        Example:
+                DE00
+        F      0.104628
+        TP    52.000000
+        FN     5.000000
+        FP   885.000000
+        TN  5246.000000
+        PR     0.055496
+        RE     0.912281
 
     """
     
@@ -440,9 +499,11 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, beta=1):
     # f is between 0 and 1, 0= precision or recall are zero, 1=perfect precision and recall
     # precision = ratio of true positives over all positives (how many events are wrongly detected?)
     # recall = ratio of true positives over true positive+false negatives (how many events are missed out?)
+    # np.divide to properly deal with divide by zero
+    precision = np.divide(true_positive, true_positive + false_positive)
+    recall = np.divide(true_positive, true_positive + false_negative)
     
-    data = [f, true_positive, false_negative, false_positive, true_negative]
-    # TODO: extend to multiple zone/columns
-    result_df = pd.DataFrame(index=['F','TP','FN','FP','TN'], columns=[zone], data=data)
+    data = [f, true_positive, false_negative, false_positive, true_negative, precision, recall]
+    result_df = pd.DataFrame(index=['F','TP','FN','FP','TN','PR','RE'], columns=[zone], data=data)
     
     return result_df
