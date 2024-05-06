@@ -55,7 +55,9 @@ dt_colors = ['dodgerblue', 'tab:red', '#1e6f4c', 'skyblue', 'burlywood', '#8cc6a
 # Percentile thresholds to investigate
 #LWS_percs = np.linspace(0.0001,0.15,200)
 #LWS_percs = np.linspace(0.0001, 0.15, 40)
-LWS_percs = np.array([0.0001, 0.002, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15])
+#LWS_percs = np.array([0.0001, 0.002, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15])
+LWS_percs = np.concatenate([np.linspace(0, 0.02, 21)[1:], np.linspace(0.02, 0.04, 11)[1:], 
+                            np.linspace(0.04, 0.08, 11)[1:],  np.linspace(0.08, 0.16, 11)[1:]])
 RL_percs  = 1-LWS_percs
 DD_percs  = 1-LWS_percs
         
@@ -99,6 +101,23 @@ data4_RL_h = data4_dem_h - w*data4_gen_h
 # TODO: Use the calendar method of ERAA 2023: calendar of 2018, remove last day of year instead of Feb 29th in leap years.
 # Why? -> 1) there is likely a 1-day shift in the ENS compared to energy variables once every four years
 #         2) Needed to correctly implement the method based on Hourly & Weekly Rolling Window
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -624,7 +643,10 @@ T7_CREDI_event, T7_event_dates, \
     T7_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
 
-
+N_event_T1 = []
+N_event_T3 = []
+N_event_T5 = []
+N_event_T7 = []
 
 p_list  = []
 for p in range(len(LWS_percs)):
@@ -642,11 +664,11 @@ for p in range(len(LWS_percs)):
     T5_mask = mask_data(T5_CREDI_event[[zone]], T5_thresh, False, 1, 0)
     T7_mask = mask_data(T7_CREDI_event[[zone]], T7_thresh, False, 1, 0)
 
-    print(f"N events (p={RL_percs[p]}, T=1) = {(T1_mask==1).sum()}")
-    print(f"N events (p={RL_percs[p]}, T=3) = {(T3_mask==1).sum()}")
-    print(f"N events (p={RL_percs[p]}, T=5) = {(T5_mask==1).sum()}")
-    print(f"N events (p={RL_percs[p]}, T=7) = {(T7_mask==1).sum()}")
-    print()
+    # Count number of drought events (it changes with T)
+    N_event_T1.append((T1_mask==1).sum())
+    N_event_T3.append((T3_mask==1).sum())
+    N_event_T5.append((T5_mask==1).sum())
+    N_event_T7.append((T7_mask==1).sum())
 
     # Calculate F (compared to ENS)
     T1_stat = get_f_score_CREDI(ens_mask, T1_mask, zone, PERIOD_length_days, beta=1)
@@ -698,12 +720,17 @@ ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
 axs[0,0].remove()
 axs[0,1].remove()
 
+print(f"Number of events for T=1 at F-score peak: {N_event_T1[stat_df.loc[(x, 'RL3 (T=1)',  'F'),(zone)].argmax()]}")
+print(f"Number of events for T=3 at F-score peak: {N_event_T3[stat_df.loc[(x, 'RL3 (T=3)',  'F'),(zone)].argmax()]}")
+print(f"Number of events for T=5 at F-score peak: {N_event_T5[stat_df.loc[(x, 'RL3 (T=5)',  'F'),(zone)].argmax()]}")
+print(f"Number of events for T=7 at F-score peak: {N_event_T7[stat_df.loc[(x, 'RL3 (T=7)',  'F'),(zone)].argmax()]}")
+
 idx, idy = 1, 0
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=1)',  'TP'),(zone)], label='RL3 (T=1)',  color=dt_colors[0], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'TP'),(zone)], label='RL3 (T=3)',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'TP'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'TP'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
-axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[zone])+' in total)\n(DF detected, when ENS)')
+axs[idx, idy].set_ylabel('True Positives in total)\n(DF detected, when ENS)')
 axs[idx, idy].set_xlabel('Fraction of events classified as drought')
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -714,7 +741,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=1)',  'TN'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'TN'),(zone)], label='RL3 (T=3)',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'TN'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'TN'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
-axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[zone])+' in total)\n(no DF detected, when no ENS)')
+axs[idx, idy].set_ylabel('True Negatives in total)\n(no DF detected, when no ENS)')
 axs[idx, idy].set_xlabel('Fraction of events classified as drought')
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -725,7 +752,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=1)',  'FP'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'FP'),(zone)], label='RL3 (T=3)',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'FP'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'FP'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
-axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[zone])+' in total)\n(DF detected, when no ENS)')
+axs[idx, idy].set_ylabel('False Positives in total)\n(DF detected, when no ENS)')
 axs[idx, idy].set_xlabel('Fraction of events classified as drought')
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -736,7 +763,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=1)',  'FN'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'FN'),(zone)], label='RL3 (T=3)',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'FN'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'FN'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
-axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[zone])+' in total)\n(No DF detected, when ENS)')
+axs[idx, idy].set_ylabel('False Negatives in total)\n(No DF detected, when ENS)')
 axs[idx, idy].set_xlabel('Fraction of events classified as drought')
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -747,7 +774,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=1)',  'PR'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'PR'),(zone)], label='RL3 (T=3)',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'PR'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'PR'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
-axs[idx, idy].set_ylabel('Precision (out of '+str(nr_of_pos[zone])+' in total)\n(How many detected droughts are ENS?)')
+axs[idx, idy].set_ylabel('Precision in total)\n(How many detected droughts are ENS?)')
 axs[idx, idy].set_xlabel('Fraction of events classified as drought')
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -758,7 +785,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=1)',  'RE'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'RE'),(zone)], label='RL3 (T=3)',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'RE'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'RE'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
-axs[idx, idy].set_ylabel('Recall (out of '+str(nr_of_pos[zone])+' in total)\n(How many ENS are identified as droughts?)')
+axs[idx, idy].set_ylabel('Recall in total)\n(How many ENS are identified as droughts?)')
 axs[idx, idy].set_xlabel('Fraction of events classified as drought')
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
