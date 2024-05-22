@@ -550,13 +550,26 @@ df = pd.DataFrame()
 list_dates = np.empty((0),dtype='datetime64[ns]')
 list_values = np.empty((0,len(eval_szon))) # dimensions: (date,szon)
 
-years_available = np.arange(1982,1999) # TODO: Change, when more is available
+years_available = np.arange(1982,2016+1) # TODO: Change, when more is available
 for y in range(len(years_available)):
-    # Load in csv file of a certain year
-    tmp_csv = pd.read_csv(path_to_eraa23_ens+'TY2033 Post-EVA FB  S2 CY'+str(years_available[y])+'_ENS_allzones.csv', header=0)
-    # Take only the entries of relevant 'evaluation' zones
-    cut_rows = tmp_csv[tmp_csv['Child Name'].isin(eval_szon)][['Child Name','Datetime','Value']]
-    
+    if years_available[y] == 2014:
+        # There is no file for 2014 at the moment. TODO: Update if 2014 is available.
+        # Current solution: add synthetic data with no ENS in 2014
+        yy = y - 1
+
+        # Load in csv file of a certain year
+        tmp_csv = pd.read_csv(path_to_eraa23_ens+'TY2033 Post-EVA FB  S2 CY'+str(years_available[yy])+'_ENS_allzones.csv', header=0)
+        # Take only the entries of relevant 'evaluation' zones
+        cut_rows = tmp_csv[tmp_csv['Child Name'].isin(eval_szon)][['Child Name','Datetime','Value']]
+        cut_rows['Value'] = 0
+
+    else:
+
+        # Load in csv file of a certain year
+        tmp_csv = pd.read_csv(path_to_eraa23_ens+'TY2033 Post-EVA FB  S2 CY'+str(years_available[y])+'_ENS_allzones.csv', header=0)
+        # Take only the entries of relevant 'evaluation' zones
+        cut_rows = tmp_csv[tmp_csv['Child Name'].isin(eval_szon)][['Child Name','Datetime','Value']]
+        
     # Correct Datetime (climate year instead of 2033 & datetime format)
     dates = pd.to_datetime(cut_rows[cut_rows['Child Name']==eval_szon[0]]['Datetime']) + pd.DateOffset(years=years_available[y]-2033)
     list_dates = np.concatenate((list_dates,dates.values),axis=0)
