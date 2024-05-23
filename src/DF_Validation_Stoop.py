@@ -121,6 +121,213 @@ data4_RL_h = data4_dem_h - w*data4_gen_h
 
 
 
+#%%
+# =================================================================
+# Plot F-score for PECD3
+# =================================================================
+
+# ---------------------------------------------
+# User defined parameters
+# ---------------------------------------------
+
+PERIOD_length_days = 1
+PERIOD_cluster_days = 1
+
+zone = 'DE00'
+
+ens_dataset = 'ERAA23'
+
+figname = f"Validation_Stoop24_{ens_dataset}_ENS_{zone}_T{PERIOD_length_days}"
+
+
+# ---------------------------------------------
+# Compute data for figure (~ 15s per variable and percentile)
+# ---------------------------------------------
+start_time = time.time()
+
+## Length of the period to consider for CREDI assessment (in hours)
+# add 1 to get indexes that make sense 
+PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
+
+# Sampling of the period (in hours)
+PERIOD_stride = 24
+
+
+if ens_dataset=='AO':
+    data3_ENS_d = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')
+elif ens_dataset=='ERAA23':
+    data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
+else:
+    raise KeyError('ENS Dataset not existent!')
+
+
+# For every percentile threshold
+# TODO: the results F, TP, FN, ... are Series objects, so that pd.concat doesn't work
+# Change the get_f_score method so that the results is a proper dataframe containing all the statistics
+# Then delete the concatting of the STatistics and directly continue with appending the drought types
+
+ens_mask = mask_data(data3_ENS_d, 0, False, 2, 0)
+nr_of_pos = (ens_mask==2).sum()
+nr_of_neg = (ens_mask==0).sum()
+
+# Get CREDI events
+lws3_CREDI_event, lws3_event_dates, \
+    lws3_event_values = get_CREDI_events(data3_gen_h.loc[('HIST')], zone, extreme_is_high=False, PERIOD_length_days=PERIOD_length_days, 
+                                         PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
+rl3_CREDI_event, rl3_event_dates, \
+    rl3_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
+                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
+dd3_CREDI_event, dd3_event_dates, \
+    dd3_event_values = get_CREDI_events(data3_dem_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
+                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
+
+p_list  = []
+for p in range(len(LWS_percs)):
+    # find capacity thresholds
+    # Percentile is computed on the clustered events ("independent" events)
+    # interpolation="nearest" gives the same result as Benjamin B.'s "empirical=True" in the function "get_thresholds"
+    lws3_thresh = np.quantile(lws3_event_values, q=LWS_percs[p], interpolation="nearest")
+    rl3_thresh = np.quantile(rl3_event_values, q=RL_percs[p], interpolation="nearest")
+    dd3_thresh = np.quantile(dd3_event_values, q=DD_percs[p], interpolation="nearest")
+
+    # Mask the data / Detect Drought days
+    lws3_mask  = mask_data(lws3_CREDI_event[[zone]], lws3_thresh, True, 1, 0)
+    rl3_mask  = mask_data(rl3_CREDI_event[[zone]], rl3_thresh, False, 1, 0)
+    dd3_mask  = mask_data(dd3_CREDI_event[[zone]], dd3_thresh, False, 1, 0)
+
+    # Calculate F (compared to ENS)
+    lws3_stat  = get_f_score_CREDI(ens_mask, lws3_mask, zone, PERIOD_length_days, beta=1)
+    rl3_stat  = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, beta=1)
+    dd3_stat  = get_f_score_CREDI(ens_mask, dd3_mask, zone, PERIOD_length_days, beta=1)
+
+    # Create Dataframe
+    p_list.append( pd.concat([lws3_stat, rl3_stat, dd3_stat], 
+                             keys=['LWS3', 'RL3', 'DD3'],   names=['Drought type']))
+    print('Done '+str(p+1)+'/'+str(len(LWS_percs)))
+stat_df  = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
+ 
+end_time = time.time()
+print(f"Duration: {timedelta(seconds=end_time - start_time)}")
+
+# Save the Data
+# DataFrame: multiindex = (LWS3, LWS4, RL3, RL4),(F, TP, FN, FP, TN),(threshholds);  columns=countries
+stat_df.to_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
+
+
+#%%
+# ---------------------------------------------
+#  Plot F / threshold (comparing to ENS / validation)
+# ---------------------------------------------
+
+# Load data
+stat_df = pd.read_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+
+x=stat_df.index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+
+fig, axs = plt.subplots(4, 2, figsize=(10,16))
+fig.suptitle('Stoop Method for '+zone+' using '+ens_dataset+' ENS')
+
+# Event time series
+idx, idy = 0, [0,1]
+ax_big = plt.subplot(4, 1, 1)
+ax_big.plot(x, stat_df.loc[(x, 'RL3',  'F'),(zone)], label='RL3',  color=dt_colors[0], alpha=0.8)
+ax_big.plot(x, stat_df.loc[(x, 'DD3',  'F'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
+ax_big.plot(x, stat_df.loc[(x, 'LWS3',  'F'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
+ax_big.set_ylabel('F-Score')
+ax_big.set_xlabel('Fraction of events classified as drought')
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
+axs[0,0].remove()
+axs[0,1].remove()
+
+idx, idy = 1, 0
+axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'TP'),(zone)], label='RL3',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'TP'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'TP'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[zone])+' in total)\n(DF detected, when ENS)')
+axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 1, 1
+axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'TN'),(zone)], label='RL3',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'TN'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'TN'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[zone])+' in total)\n(no DF detected, when no ENS)')
+axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 2, 0
+axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'FP'),(zone)], label='RL3',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'FP'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'FP'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[zone])+' in total)\n(DF detected, when no ENS)')
+axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 2, 1
+axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'FN'),(zone)], label='RL3',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'FN'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'FN'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[zone])+' in total)\n(No DF detected, when ENS)')
+axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 3, 0
+axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'PR'),(zone)], label='RL3',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'PR'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'PR'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('Precision (out of '+str(nr_of_pos[zone])+' in total)\n(How many detected droughts are ENS?)')
+axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 3, 1
+axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'RE'),(zone)], label='RL3',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'RE'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'RE'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('Recall (out of '+str(nr_of_pos[zone])+' in total)\n(How many ENS are identified as droughts?)')
+axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+#plt.close()
+
+print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  #%%
 # =================================================================
 # Plot F-score for PECD3 and PECD4
