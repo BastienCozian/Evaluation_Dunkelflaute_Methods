@@ -477,6 +477,8 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, PERIOD_cluste
             # TRUE POSITIVE
             true_positive += 1
             # Jump to the next possible Dunkelflaute event.
+
+            #id -= PERIOD_length_days    
             id -= PERIOD_cluster_days
 
             # TODO: Possibility to sum their values later to compute the severity
@@ -488,6 +490,7 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, PERIOD_cluste
             id2 = id - (PERIOD_length_days - PERIOD_cluster_days)
             while (id2 < id) and (df_mask.iloc[id].values == 0) :
                 id -= 1
+            
 
 
         elif ens_mask[[zone]].iloc[id].values == 2:
@@ -499,7 +502,9 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, PERIOD_cluste
             # FALSE POSITIVE
             false_positive += 1
             # Jump to the next possible Dunkelflaute event.
+            
             id -= PERIOD_cluster_days
+            #id -= 1
         
         else:
             id -= 1
