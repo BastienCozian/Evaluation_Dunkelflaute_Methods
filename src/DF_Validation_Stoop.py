@@ -196,9 +196,9 @@ for p in range(len(LWS_percs)):
     dd3_mask  = mask_data(dd3_CREDI_event[[zone]], dd3_thresh, False, 1, 0)
 
     # Calculate F (compared to ENS)
-    lws3_stat  = get_f_score_CREDI(ens_mask, lws3_mask, zone, PERIOD_length_days, beta=1)
-    rl3_stat  = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, beta=1)
-    dd3_stat  = get_f_score_CREDI(ens_mask, dd3_mask, zone, PERIOD_length_days, beta=1)
+    lws3_stat  = get_f_score_CREDI(ens_mask, lws3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    rl3_stat  = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    dd3_stat  = get_f_score_CREDI(ens_mask, dd3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
 
     # Create Dataframe
     p_list.append( pd.concat([lws3_stat, rl3_stat, dd3_stat], 
@@ -418,12 +418,12 @@ for p in range(len(LWS_percs)):
     dd4_mask  = mask_data(dd4_CREDI_event[[zone]], dd4_thresh, False, 1, 0)
 
     # Calculate F (compared to ENS)
-    lws3_stat  = get_f_score_CREDI(ens_mask, lws3_mask, zone, PERIOD_length_days, beta=1)
-    lws4_stat  = get_f_score_CREDI(ens_mask, lws4_mask, zone, PERIOD_length_days, beta=1)
-    rl3_stat  = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, beta=1)
-    rl4_stat  = get_f_score_CREDI(ens_mask, rl4_mask, zone, PERIOD_length_days, beta=1)
-    dd3_stat  = get_f_score_CREDI(ens_mask, dd3_mask, zone, PERIOD_length_days, beta=1)
-    dd4_stat  = get_f_score_CREDI(ens_mask, dd4_mask, zone, PERIOD_length_days, beta=1)
+    lws3_stat  = get_f_score_CREDI(ens_mask, lws3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    lws4_stat  = get_f_score_CREDI(ens_mask, lws4_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    rl3_stat  = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    rl4_stat  = get_f_score_CREDI(ens_mask, rl4_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    dd3_stat  = get_f_score_CREDI(ens_mask, dd3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    dd4_stat  = get_f_score_CREDI(ens_mask, dd4_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
 
     # Create Dataframe
     p_list.append( pd.concat([lws3_stat, lws4_stat, rl3_stat, rl4_stat, dd3_stat, dd4_stat], 
@@ -650,8 +650,8 @@ for p in range(len(LWS_percs)):
     rl3_HWRW_mask = mask_data(rl3_HWRW_CREDI_event[[zone]], rl3_HWRW_thresh, False, 1, 0)
 
     # Calculate F (compared to ENS)
-    rl3_stat = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, beta=1)
-    rl3_HWRW_stat = get_f_score_CREDI(ens_mask, rl3_HWRW_mask, zone, PERIOD_length_days, beta=1)
+    rl3_stat = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    rl3_HWRW_stat = get_f_score_CREDI(ens_mask, rl3_HWRW_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
 
     # Create Dataframe
     p_list.append( pd.concat([rl3_stat, rl3_HWRW_stat], 
@@ -799,7 +799,7 @@ start_time = time.time()
 
 ## Length of the period to consider for CREDI assessment (in hours)
 # add 1 to get indexes that make sense 
-PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
+#PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
 
 # Sampling of the period (in hours)
 PERIOD_stride = 24
@@ -837,14 +837,14 @@ T3_CREDI_event, T3_event_dates, \
                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
 
 PERIOD_length_days = 5
-PERIOD_cluster_days = 5
+PERIOD_cluster_days = 4
 # Get CREDI events
 T5_CREDI_event, T5_event_dates, \
     T5_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
 
 PERIOD_length_days = 7
-PERIOD_cluster_days = 7
+PERIOD_cluster_days = 6
 # Get CREDI events
 T7_CREDI_event, T7_event_dates, \
     T7_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
@@ -878,10 +878,10 @@ for p in range(len(LWS_percs)):
     N_event_T7.append((T7_mask==1).sum())
 
     # Calculate F (compared to ENS)
-    T1_stat = get_f_score_CREDI(ens_mask, T1_mask, zone, PERIOD_length_days, beta=1)
-    T3_stat = get_f_score_CREDI(ens_mask, T3_mask, zone, PERIOD_length_days, beta=1)
-    T5_stat = get_f_score_CREDI(ens_mask, T5_mask, zone, PERIOD_length_days, beta=1)
-    T7_stat = get_f_score_CREDI(ens_mask, T7_mask, zone, PERIOD_length_days, beta=1)
+    T1_stat = get_f_score_CREDI(ens_mask, T1_mask, zone, PERIOD_length_days=1, PERIOD_cluster_days=1, beta=1)
+    T3_stat = get_f_score_CREDI(ens_mask, T3_mask, zone, PERIOD_length_days=3, PERIOD_cluster_days=3, beta=1)
+    T5_stat = get_f_score_CREDI(ens_mask, T5_mask, zone, PERIOD_length_days=5, PERIOD_cluster_days=4, beta=1)
+    T7_stat = get_f_score_CREDI(ens_mask, T7_mask, zone, PERIOD_length_days=7, PERIOD_cluster_days=6, beta=1)
 
     # Create Dataframe
     p_list.append( pd.concat([T1_stat, T3_stat, T5_stat, T7_stat], 
