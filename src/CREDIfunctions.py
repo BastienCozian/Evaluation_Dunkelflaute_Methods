@@ -242,7 +242,7 @@ def get_CREDI_events(df_data, zone, extreme_is_high=True, PERIOD_length_days=1, 
     TODO: add the possibility to use "start_date" and "end_date". Apparently I first need to correct an issue in the code of Ben, 
     but I can't remember what...
     /!\ WARNING /!\ -> Currently, we first compute the climatology based on all values to have a smooth definition 
-    (the more data, the smoother) but this need to be accounted for when e.g. computing the percentile valye.
+    (the more data, the smoother) but this need to be accounted for when e.g. computing the percentile value.
     Moreover, this may not be appropriate when looking at at projection data when we want only e.g. the 2015-2045 period.
 
     Parameters
@@ -367,7 +367,7 @@ def get_CREDI_events(df_data, zone, extreme_is_high=True, PERIOD_length_days=1, 
 
 
 
-def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, beta=1):
+def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1):
     """
     Compute the F-score for CREDI events.
     We consider that a CREDI event is successfully detected an ENS (true positive) if at least one ENS occur during 
@@ -476,9 +476,19 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, beta=1):
 
             # TRUE POSITIVE
             true_positive += 1
-            # Jump over other possible ENS that occur during the detected Dunkelflaute event.
+            # Jump to the next possible Dunkelflaute event.
+            id -= PERIOD_cluster_days
+
             # TODO: Possibility to sum their values later to compute the severity
-            id -= PERIOD_length_days
+
+            # Need to account for a special case: 
+            # Check the remaining days of the Dunkelflaute events over the allowed overlapping period (PERIOD_length_days - PERIOD_cluster_days).
+            # If we have an ENS, we don't want to label this day as 'False Negative' because it was actually detected by the current dunkelflaute event.
+            # Hence, we jump to the day before as long as there is no other dunkelflaute.
+            id2 = id - (PERIOD_length_days - PERIOD_cluster_days)
+            while (id2 < id) and (df_mask.iloc[id].values == 0) :
+                id -= 1
+
 
         elif ens_mask[[zone]].iloc[id].values == 2:
             # FALSE NEGATIVE
@@ -488,7 +498,8 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, beta=1):
         elif df_mask.iloc[id].values == 1:
             # FALSE POSITIVE
             false_positive += 1
-            id -= 1
+            # Jump to the next possible Dunkelflaute event.
+            id -= PERIOD_cluster_days
         
         else:
             id -= 1
@@ -499,7 +510,7 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, beta=1):
     # f is between 0 and 1, 0= precision or recall are zero, 1=perfect precision and recall
     # precision = ratio of true positives over all positives (how many events are wrongly detected?)
     # recall = ratio of true positives over true positive+false negatives (how many events are missed out?)
-    # np.divide to properly deal with divide by zero
+    # np.divide to properly deal with division by zero
     precision = np.divide(true_positive, true_positive + false_positive)
     recall = np.divide(true_positive, true_positive + false_negative)
     
