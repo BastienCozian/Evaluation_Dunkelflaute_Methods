@@ -866,7 +866,7 @@ for p in range(len(LWS_percs)):
     T7_thresh = np.quantile(T7_event_values, q=RL_percs[p], interpolation="nearest")
 
     # Mask the data / Detect Drought days
-    T1_mask = mask_data(T1_CREDI_event[[zone]], T1_thresh, False, 1, 0)
+    T1_mask = mask_data(T1_CREDI_event[[zone]], T1_thresh, False, 1, 0) # WARNING! No clustering was applied to T1_CREDI_event 
     T3_mask = mask_data(T3_CREDI_event[[zone]], T3_thresh, False, 1, 0)
     T5_mask = mask_data(T5_CREDI_event[[zone]], T5_thresh, False, 1, 0)
     T7_mask = mask_data(T7_CREDI_event[[zone]], T7_thresh, False, 1, 0)
