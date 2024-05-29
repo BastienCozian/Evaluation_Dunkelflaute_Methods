@@ -19,11 +19,12 @@ import matplotlib.dates as mdates
 import matplotlib.pylab as pylab
 import matplotlib.transforms as mtransforms
 from datetime import timedelta
+import datetime as dtime
 import time
 
 from Dunkelflaute_function_library import get_zones, get_thresholds, detect_drought_Otero22, mask_data, get_f_score, get_df_timerange
 from CREDIfunctions import Modified_Ordinal_Hour, Climatology_Hourly, Climatology_Hourly_Rolling, \
-    Climatology_Hourly_Weekly_Rolling, get_CREDI_events, get_f_score_CREDI
+    Climatology_Hourly_Weekly_Rolling, get_CREDI_events, get_f_score_CREDI, get_f_score_CREDI_new, compute_timeline
 
 # Set parameters
 path_to_data      = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/Dunkelflaute_plots/Data/'
@@ -58,6 +59,7 @@ dt_colors = ['dodgerblue', 'tab:red', '#1e6f4c', 'skyblue', 'burlywood', '#8cc6a
 #LWS_percs = np.array([0.0001, 0.002, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15])
 LWS_percs = np.concatenate([np.linspace(0, 0.02, 21)[1:], np.linspace(0.02, 0.04, 11)[1:], 
                             np.linspace(0.04, 0.08, 11)[1:],  np.linspace(0.08, 0.16, 11)[1:]])
+#LWS_percs = np.asarray([0.005, 0.01, 0.02, 0.04])
 RL_percs  = 1-LWS_percs
 DD_percs  = 1-LWS_percs
         
@@ -103,6 +105,32 @@ data4_RL_h = data4_dem_h - w*data4_gen_h
 #         2) Needed to correctly implement the method based on Hourly & Weekly Rolling Window
 
 
+# =================================================================
+# Load daily data
+# =================================================================
+
+if ens_dataset=='AO':
+    data3_ENS_d = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')
+elif ens_dataset=='ERAA23':
+    data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
+else:
+    raise KeyError('ENS Dataset not existent!')
+data3_dem_d = pd.read_pickle(path_to_data+'PEMMDB_demand_TY'+str(ty_pecd3)+'_daily.pkl')
+data4_dem_d = pd.read_pickle(path_to_data+'ETM_demand_TY'+str(ty_pecd4)+'_daily.pkl')
+
+data4_REP_d = pd.read_pickle(path_to_data+'PECD4_Generation_TY'+str(ty_pecd4)+'_national_daily.pkl')
+data3_REP_d = pd.read_pickle(path_to_data+'PECD3_Generation_TY'+str(ty_pecd3)+'_national_daily.pkl')
+
+# Weight REP for experimenting
+start_date = '1982-01-01 00:00:00'
+end_date   = '2016-12-31 00:00:00'
+data3_cropped1 = data3_REP_d.query('Date>=@start_date and Date <= @end_date')
+data4_cropped1 = data4_REP_d.query('Date>=@start_date and Date <= @end_date')
+data3_gen_d = data3_cropped1[~((data3_cropped1.index.get_level_values(1).day == 29) & (data3_cropped1.index.get_level_values(1).month == 2))]
+data4_gen_d = data4_cropped1[~((data4_cropped1.index.get_level_values(1).day == 29) & (data4_cropped1.index.get_level_values(1).month == 2))]
+
+data3_RL_d = data3_dem_d - w*data3_gen_d
+data4_RL_d = data4_dem_d - w*data4_gen_d
 
 
 
@@ -170,6 +198,8 @@ ens_mask = mask_data(data3_ENS_d, 0, False, 2, 0)
 nr_of_pos = (ens_mask==2).sum()
 nr_of_neg = (ens_mask==0).sum()
 
+common_index = data3_RL_h.loc[('HIST')].index.intersection(ens_mask.index)
+
 # Get CREDI events
 lws3_CREDI_event, lws3_event_dates, \
     lws3_event_values = get_CREDI_events(data3_gen_h.loc[('HIST')], zone, extreme_is_high=False, PERIOD_length_days=PERIOD_length_days, 
@@ -190,6 +220,15 @@ for p in range(len(LWS_percs)):
     rl3_thresh = np.quantile(rl3_event_values, q=RL_percs[p], interpolation="nearest")
     dd3_thresh = np.quantile(dd3_event_values, q=DD_percs[p], interpolation="nearest")
 
+    # Calculate F (compared to ENS)
+    lws3_stat = get_f_score_CREDI_new(data3_ENS_d, lws3_event_dates, lws3_event_values, lws3_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=False, beta=1)
+    rl3_stat = get_f_score_CREDI_new(data3_ENS_d, rl3_event_dates, rl3_event_values, rl3_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=True, beta=1)
+    dd3_stat = get_f_score_CREDI_new(data3_ENS_d, dd3_event_dates, dd3_event_values, dd3_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=True, beta=1)
+
+    """
     # Mask the data / Detect Drought days
     lws3_mask  = mask_data(lws3_CREDI_event[[zone]], lws3_thresh, True, 1, 0)
     rl3_mask  = mask_data(rl3_CREDI_event[[zone]], rl3_thresh, False, 1, 0)
@@ -199,6 +238,8 @@ for p in range(len(LWS_percs)):
     lws3_stat  = get_f_score_CREDI(ens_mask, lws3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
     rl3_stat  = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
     dd3_stat  = get_f_score_CREDI(ens_mask, dd3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    """
+
 
     # Create Dataframe
     p_list.append( pd.concat([lws3_stat, rl3_stat, dd3_stat], 
@@ -377,6 +418,8 @@ ens_mask = mask_data(data3_ENS_d, 0, False, 2, 0)
 nr_of_pos = (ens_mask==2).sum()
 nr_of_neg = (ens_mask==0).sum()
 
+common_index = data3_RL_h.loc[('HIST')].index.intersection(ens_mask.index)
+
 # Get CREDI events
 lws3_CREDI_event, lws3_event_dates, \
     lws3_event_values = get_CREDI_events(data3_gen_h.loc[('HIST')], zone, extreme_is_high=False, PERIOD_length_days=PERIOD_length_days, 
@@ -409,6 +452,22 @@ for p in range(len(LWS_percs)):
     dd3_thresh = np.quantile(dd3_event_values, q=DD_percs[p], interpolation="nearest")
     dd4_thresh = np.quantile(dd4_event_values, q=DD_percs[p], interpolation="nearest")
 
+    # Calculate F (compared to ENS)
+    lws3_stat = get_f_score_CREDI_new(data3_ENS_d, lws3_event_dates, lws3_event_values, lws3_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=False, beta=1)
+    lws4_stat = get_f_score_CREDI_new(data3_ENS_d, lws4_event_dates, lws4_event_values, lws4_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=False, beta=1)
+    rl3_stat = get_f_score_CREDI_new(data3_ENS_d, rl3_event_dates, rl3_event_values, rl3_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=True, beta=1)
+    rl4_stat = get_f_score_CREDI_new(data3_ENS_d, rl4_event_dates, rl4_event_values, rl4_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=True, beta=1)
+    dd3_stat = get_f_score_CREDI_new(data3_ENS_d, dd3_event_dates, dd3_event_values, dd3_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=True, beta=1)
+    dd4_stat = get_f_score_CREDI_new(data3_ENS_d, dd4_event_dates, dd4_event_values, dd4_thresh, common_index, zone, 
+                                      PERIOD_length_days=1, extreme_is_high=True, beta=1)
+    
+
+    """
     # Mask the data / Detect Drought days
     lws3_mask  = mask_data(lws3_CREDI_event[[zone]], lws3_thresh, True, 1, 0)
     lws4_mask  = mask_data(lws4_CREDI_event[[zone]], lws4_thresh, True, 1, 0)
@@ -424,6 +483,7 @@ for p in range(len(LWS_percs)):
     rl4_stat  = get_f_score_CREDI(ens_mask, rl4_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
     dd3_stat  = get_f_score_CREDI(ens_mask, dd3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
     dd4_stat  = get_f_score_CREDI(ens_mask, dd4_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    """
 
     # Create Dataframe
     p_list.append( pd.concat([lws3_stat, lws4_stat, rl3_stat, rl4_stat, dd3_stat, dd4_stat], 
@@ -624,6 +684,8 @@ ens_mask = mask_data(data3_ENS_d, 0, False, 2, 0)
 nr_of_pos = (ens_mask==2).sum()
 nr_of_neg = (ens_mask==0).sum()
 
+common_index = data3_RL_h.loc[('HIST')].index.intersection(ens_mask.index)
+
 # Get CREDI events
 rl3_CREDI_event, rl3_event_dates, \
     rl3_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
@@ -645,6 +707,12 @@ for p in range(len(LWS_percs)):
     rl3_thresh = np.quantile(rl3_event_values, q=RL_percs[p], interpolation="nearest")
     rl3_HWRW_thresh = np.quantile(rl3_HWRW_event_values, q=RL_percs[p], interpolation="nearest")
 
+    rl3_stat      = get_f_score_CREDI_new(data3_ENS_d, rl3_event_dates, rl3_event_values, rl3_thresh, common_index, zone, 
+                                          PERIOD_length_days=1, extreme_is_high=True, beta=1)
+    rl3_HWRW_stat = get_f_score_CREDI_new(data3_ENS_d, rl3_HWRW_event_dates, rl3_HWRW_event_values, rl3_HWRW_thresh, common_index, zone, 
+                                          PERIOD_length_days=1, extreme_is_high=True, beta=1)
+    
+    """
     # Mask the data / Detect Drought days
     rl3_mask = mask_data(rl3_CREDI_event[[zone]], rl3_thresh, False, 1, 0)
     rl3_HWRW_mask = mask_data(rl3_HWRW_CREDI_event[[zone]], rl3_HWRW_thresh, False, 1, 0)
@@ -652,6 +720,7 @@ for p in range(len(LWS_percs)):
     # Calculate F (compared to ENS)
     rl3_stat = get_f_score_CREDI(ens_mask, rl3_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
     rl3_HWRW_stat = get_f_score_CREDI(ens_mask, rl3_HWRW_mask, zone, PERIOD_length_days, PERIOD_cluster_days, beta=1)
+    """
 
     # Create Dataframe
     p_list.append( pd.concat([rl3_stat, rl3_HWRW_stat], 
@@ -776,6 +845,8 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 
 
 
+
+
  #%%
 # =================================================================
 # Plot F-score for different duration T
@@ -822,6 +893,8 @@ ens_mask = mask_data(data3_ENS_d, 0, False, 2, 0)
 nr_of_pos = (ens_mask==2).sum()
 nr_of_neg = (ens_mask==0).sum()
 
+common_index = data3_RL_h.loc[('HIST')].index.intersection(ens_mask.index)
+
 PERIOD_length_days = 1
 PERIOD_cluster_days = 1
 # Get CREDI events
@@ -865,6 +938,17 @@ for p in range(len(LWS_percs)):
     T5_thresh = np.quantile(T5_event_values, q=RL_percs[p], interpolation="nearest")
     T7_thresh = np.quantile(T7_event_values, q=RL_percs[p], interpolation="nearest")
 
+    # Calculate F (compared to ENS)
+    T1_stat = get_f_score_CREDI_new(data3_ENS_d, T1_event_dates, T1_event_values, T1_thresh, common_index, zone, 
+                                    PERIOD_length_days=1, extreme_is_high=True, beta=1)
+    T3_stat = get_f_score_CREDI_new(data3_ENS_d, T3_event_dates, T3_event_values, T3_thresh, common_index, zone, 
+                                    PERIOD_length_days=3, extreme_is_high=True, beta=1)
+    T5_stat = get_f_score_CREDI_new(data3_ENS_d, T5_event_dates, T5_event_values, T5_thresh, common_index, zone, 
+                                    PERIOD_length_days=5, extreme_is_high=True, beta=1)
+    T7_stat = get_f_score_CREDI_new(data3_ENS_d, T7_event_dates, T7_event_values, T7_thresh, common_index, zone, 
+                                    PERIOD_length_days=7, extreme_is_high=True, beta=1)
+
+    """
     # Mask the data / Detect Drought days
     T1_mask = mask_data(T1_CREDI_event[[zone]], T1_thresh, False, 1, 0) # WARNING! No clustering was applied to T1_CREDI_event 
     T3_mask = mask_data(T3_CREDI_event[[zone]], T3_thresh, False, 1, 0)
@@ -876,12 +960,7 @@ for p in range(len(LWS_percs)):
     N_event_T3.append((T3_mask==1).sum())
     N_event_T5.append((T5_mask==1).sum())
     N_event_T7.append((T7_mask==1).sum())
-
-    # Calculate F (compared to ENS)
-    T1_stat = get_f_score_CREDI(ens_mask, T1_mask, zone, PERIOD_length_days=1, PERIOD_cluster_days=1, beta=1)
-    T3_stat = get_f_score_CREDI(ens_mask, T3_mask, zone, PERIOD_length_days=3, PERIOD_cluster_days=3, beta=1)
-    T5_stat = get_f_score_CREDI(ens_mask, T5_mask, zone, PERIOD_length_days=5, PERIOD_cluster_days=4, beta=1)
-    T7_stat = get_f_score_CREDI(ens_mask, T7_mask, zone, PERIOD_length_days=7, PERIOD_cluster_days=6, beta=1)
+    """
 
     # Create Dataframe
     p_list.append( pd.concat([T1_stat, T3_stat, T5_stat, T7_stat], 
@@ -927,10 +1006,12 @@ ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
 axs[0,0].remove()
 axs[0,1].remove()
 
+"""
 print(f"Number of events for T=1 at F-score peak: {N_event_T1[stat_df.loc[(x, 'RL3 (T=1)',  'F'),(zone)].argmax()]}")
 print(f"Number of events for T=3 at F-score peak: {N_event_T3[stat_df.loc[(x, 'RL3 (T=3)',  'F'),(zone)].argmax()]}")
 print(f"Number of events for T=5 at F-score peak: {N_event_T5[stat_df.loc[(x, 'RL3 (T=5)',  'F'),(zone)].argmax()]}")
 print(f"Number of events for T=7 at F-score peak: {N_event_T7[stat_df.loc[(x, 'RL3 (T=7)',  'F'),(zone)].argmax()]}")
+"""
 
 idx, idy = 1, 0
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=1)',  'TP'),(zone)], label='RL3 (T=1)',  color=dt_colors[0], alpha=0.8)
@@ -1018,5 +1099,120 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%% 
+# =================================================================
+# Plot Timeline
+# =================================================================
+# Plot Timelines of DF Detection and ENS (only for AO ENS data so far!)
+# only HIST (obviously)
+# whithout February 29th
+# Grid plot: X=DoY, Y=Year, Colors: White=TN, Blue=FP, Red=FN, Green=TP
+# For each droughttype individual panels
+
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import Patch
+
+# ---------------------------------------------
+# User defined parameters
+# ---------------------------------------------
+
+PERIOD_length_days = 7
+PERIOD_cluster_days = 6
+
+zone = 'DE00'
+
+ens_dataset = 'ERAA23'
+
+figname = f"Timeline_Stoop24_{ens_dataset}_ENS_{zone}_T{PERIOD_length_days}_Tc{PERIOD_cluster_days}"
+
+# ---------------------------------------------
+# Compute data for figure (~ 15s per variable and percentile)
+# ---------------------------------------------
+start_time = time.time()
+
+## Length of the period to consider for CREDI assessment (in hours)
+# add 1 to get indexes that make sense 
+PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
+
+# Sampling of the period (in hours)
+PERIOD_stride = 24
+
+
+def dropLeapDays(df):
+    return df[~((df.index.get_level_values('Date').day == 29) & (df.index.get_level_values('Date').month == 2))]
+
+# Create colormap
+colors = ['whitesmoke', 'royalblue', 'red', 'limegreen']
+cmap=ListedColormap(colors)
+legend_elements = [Patch(facecolor=colors[0], edgecolor=colors[0],label='No DF, No ENS'),
+                   Patch(facecolor=colors[1], edgecolor=colors[1],label='DF detected, but no ENS'),
+                   Patch(facecolor=colors[2], edgecolor=colors[2],label='No DF, but ENS'),
+                   Patch(facecolor=colors[3], edgecolor=colors[3],label='DF detected and ENS')]
+
+if ens_dataset=='AO':
+    data3_ENS_d = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')
+    X1= np.arange(364)
+    X2= np.arange(364*24)
+elif ens_dataset=='ERAA23':
+    data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
+    X1= np.arange(365)
+    X2= np.arange(365*24)
+else:
+    raise KeyError('ENS Dataset not existent!')
+Y = np.arange(1982,2017) # common period of ENS & PECD
+
+# Generate masked data
+ens_mask_d = mask_data(data3_ENS_d, 0, False, 2, 0)
+
+# Get CREDI events
+rl3_CREDI_event, rl3_event_dates, \
+    rl3_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
+                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
+
+percentile = 0.01
+rl3_thresh = np.quantile(rl3_event_values, q=1-percentile, interpolation="nearest")
+
+df_mask_timeline = compute_timeline(data3_ENS_d, rl3_event_dates, rl3_event_values, rl3_thresh, zone, PERIOD_length_days, 
+                                    extreme_is_high=True, start_date='1982-01-01', end_date='2016-12-31')
+
+
+# Tranform detection masks into the right format
+def detmask2matrix(detmask,X,Y):
+    return np.reshape(detmask, (len(Y),len(X)))
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+
+#axs.pcolormesh(X1, Y, detmask2matrix(rl3_detmask[zones_szon[c]],X1,Y), cmap=cmap)
+ax.pcolormesh(X1, Y, detmask2matrix(df_mask_timeline[zone],X1,Y), cmap=cmap)
+ax.set_title(f'RL (PECD 3.1, {ens_dataset}, {zone}, T={PERIOD_length_days}, Tc={PERIOD_cluster_days})')
+ax.set_ylabel('Year')
+ax.set_xlabel('Day of Year')
+ax.legend(handles=legend_elements, facecolor="white", loc='upper center', framealpha=1)
+
+
+plt.tight_layout()
+plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
+#plt.close()
+        
+# TODO: Some masks are shorter? Why? In year with leap day the 31.12. is missing (and the leap day...)
+      
 
 # %%
