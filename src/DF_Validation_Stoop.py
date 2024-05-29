@@ -1136,7 +1136,7 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 # =================================================================
 # Plot Timeline
 # =================================================================
-# Plot Timelines of DF Detection and ENS (only for AO ENS data so far!)
+# Plot Timelines of DF Detection and ENS
 # only HIST (obviously)
 # whithout February 29th
 # Grid plot: X=DoY, Y=Year, Colors: White=TN, Blue=FP, Red=FN, Green=TP
@@ -1175,10 +1175,6 @@ PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
 
 # Sampling of the period (in hours)
 PERIOD_stride = 24
-
-
-def dropLeapDays(df):
-    return df[~((df.index.get_level_values('Date').day == 29) & (df.index.get_level_values('Date').month == 2))]
 
 # Create colormap
 colors = ['whitesmoke', 'royalblue', 'red', 'limegreen']
