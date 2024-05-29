@@ -541,7 +541,7 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
     Example: get_f_score_CREDI_new(data3_ENS_d, T1_event_dates, T1_event_values, T1_thresh, common_index, zone, PERIOD_length_days, beta=1)
 
     Compute the F-score for CREDI events.
-    We consider that a CREDI event is successfully detected an ENS (true positive) if at least one ENS occur during 
+    We consider that a CREDI event has successfully detected an ENS (true positive) if at least one ENS occur during 
     the `PERIOD_length_days`-day-long CREDI event.
 
     The dates of the Dunkelflaute eventq computed with the CREDI method are shifted by one day. 
@@ -569,7 +569,6 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
     event_dates : list of Timestamp
         Date of CREDI event. CREDI events are 'Dunkelflaute' if value > threshold.
         For RL and DD (resp. LWS) ranked from highest to smallest CREDI value (resp. smallest to highest). 
-        TODO: check incrasing for LWS
 
     event_values : list of float
         CREDI value of Dunkelflaute events.
@@ -590,6 +589,10 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
 
     PERIOD_length_days: int
         Duration of CREDI events.
+
+    extreme_is_high : bool
+        True  -> extreme events have high value (e.g. demand, residual load)
+        False -> extreme events have low value (e.g. renewable production)
 
     beta : float
         Relative weight of precision and recall.
@@ -635,10 +638,6 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
     false_negative = 0
     false_positive = 0
     true_negative  = 0
-
-    # TODO : check DF_dates and take only above/below threshold.
-    # TODO : only on common calendar period
-    # TODO : shift CREDI by one day
 
     ENS_dates = list(df_ENS[df_ENS[zone] > 0].index) # List of Timestamp
     ENS_values = list(df_ENS[df_ENS[zone] > 0][zone]) # List of float
@@ -708,6 +707,156 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
     result_df = pd.DataFrame(index=['F','TP','FN','FP','TN','PR','RE'], columns=[zone], data=data)
     
     return result_df
+
+
+
+
+
+
+
+
+
+
+def get_correlation_CREDI(df_ENS, event_dates, event_values, threshold, common_index, zone, PERIOD_length_days, 
+                          extreme_is_high=True, only_true_positive=True):
+    '''
+    Compute the x and y axis used to plot the correlation between the Severity (CREDI value) of DF events and the sum of ENS during these events.
+    Similar structure as function `get_f_score_CREDI`
+    We consider that a CREDI event has successfully detected an ENS (true positive) if at least one ENS occur during 
+    the `PERIOD_length_days`-day-long CREDI event.
+
+    The dates of the Dunkelflaute eventq computed with the CREDI method are shifted by one day. 
+    Indeed, a 3-day CREDI event indexed at day 1982-01-04 is actually the average from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
+
+    TODO: make a proper choice to use a single zone or multiple zone. Currently no choice is made.
+
+    Parameters
+    ----------
+    df_ENS : DataFrame
+        ENS values.
+
+        Example:
+                    DE00  NL00
+        Date                  
+        1982-01-01     0     0
+        1982-01-02 68.75     0
+
+    event_dates : list of Timestamp
+        Date of CREDI event. CREDI events are 'Dunkelflaute' if value > threshold.
+        For RL and DD (resp. LWS) ranked from highest to smallest CREDI value (resp. smallest to highest). 
+
+    event_values : list of float
+        CREDI value of Dunkelflaute events.
+        For RL and DD (resp. LWS), ranked in decreasing order (resp. increasing order).
+
+    threshold : float
+        CREDI value corresponding to the desired quantile.
+        For RL and DD (resp. LWS), CREDI > threshold (resp. CREDI < threshold) are labelled "Dunkelflaute" events.
+
+    common_index: Pandas DatetimeIndex
+        List of date times common to the DF and ENS datasets.
+        
+        Example to get common_index:
+        `common_index = data3_RL_h.loc[('HIST')].index.intersection(ens_mask.index)`
+
+    zone : str
+        e.g. "DE00", "NL00"
+
+    PERIOD_length_days: int
+        Duration of CREDI events.
+
+    extreme_is_high : bool
+        True  -> extreme events have high value (e.g. demand, residual load)
+        False -> extreme events have low value (e.g. renewable production)
+
+    only_true_positive : bool
+        True -> only include 'True Positive', i.e. DF event with ENS
+        False -> also include 'False Negative' (ENS but no DF) and 'False Positive' (DF but no ENS)
+
+    Returns
+    -------
+
+    DF_values : Numpy array
+        CREDI value of DF events
+
+    sum_ENS_values : Numpy array
+        Sum of ENS occuring in a CREDI event. ENS event is not detected by a CREDI event, then it is the value of a single ENS event.
+        Units: GWh 
+
+    '''
+
+    ENS_dates = list(df_ENS[df_ENS[zone] > 0].index) # List of Timestamp
+    ENS_values = list(df_ENS[df_ENS[zone] > 0][zone]) # List of float
+    # Count in how many DF event each ENS lies in. 
+    # Useful to check in an ENS is captured by different DF event because we allow for overlapping of DF events.
+    ENS_in_DF = [0] * len(ENS_dates) 
+
+    # Take CREDI > threshold. They are the "Dunkelflaute" events
+    if extreme_is_high:
+        idx_above_thresh = np.sum(event_values > threshold)
+    else:
+        idx_above_thresh = np.sum(event_values < threshold)
+    DF_values = event_values[:idx_above_thresh]
+    DF_dates = event_dates[:idx_above_thresh]
+
+    # Sum of ENS values during DF events.
+    sum_ENS_values = [np.nan] * len(DF_dates) 
+
+    for j, DF_date in enumerate(DF_dates):
+
+        # Shift the index of CREDI events by one day (CREDI from day 1 to day 3 is indexed at day 4)
+        DF_date = DF_date - dtime.timedelta(1)
+
+        if DF_date in common_index:
+
+            sum_ens = 0
+
+            for i in range(len(ENS_dates)):
+
+                if (abs(DF_date - ENS_dates[i]) < dtime.timedelta(PERIOD_length_days)) and (DF_date >= ENS_dates[i]):
+                    # CREDI is indexed by last day, therefore if ENS in DF, we have DF_date > ENS_dates[i].
+                    # We check if ENS occur within the `PERIOD_length_days` days of the DF event.
+                    sum_ens += ENS_values[i]
+                    ENS_in_DF[i] += 1  
+                    
+            if sum_ens > 0:
+                # If at least one ENS occur in the DF event
+                #true_positive += 1
+                sum_ENS_values[j] = sum_ens
+            else:
+                #false_positive += 1
+                
+                if not(only_true_positive):
+                    sum_ENS_values[j] = sum_ens
+        
+        else:
+            print(f'Warning: the ENS date period does not include the Dunkelflaute date {DF_date}.')
+    
+    for i, ENS_date in enumerate(ENS_dates):
+
+        if ENS_date in common_index:
+        
+            if ENS_in_DF[i] == 0:
+
+                if not(only_true_positive):
+                    #false_negative += 1
+                    # Add to the list a zero value for DF ???
+                    sum_ENS_values = sum_ENS_values + [ENS_values[i]]
+                    DF_values = DF_values + [0]
+
+        else:
+            print(f'Warning: the Dunkelflaute date period does not include the ENS date {ENS_date}.')
+        
+    if sum(np.asarray(ENS_in_DF) > 1) > 0:
+        print(f'ENS occuring in more than one DF: {np.asarray(ENS_dates)[np.asarray(ENS_in_DF) > 1]}')
+
+    
+    return np.asarray(DF_values) / 1000, np.asarray(sum_ENS_values) / 1000 # MWh -> GWh
+
+
+
+
+
 
 
 
