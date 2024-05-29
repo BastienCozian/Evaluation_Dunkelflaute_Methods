@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This plot loads in the results of energy drought detection by method 1 and mehtod 2 and creates various plots.
+This plot loads in the results of energy drought detection by method 1 and method 2 and creates various plots.
 It also loads in the underlying data used for detection and ENS data for validation plots.
 
 For questions, refer to benjamin.biewald@tennet.eu
@@ -26,8 +26,10 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
 
 #%% Specify parameters
-path_to_data      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/Data/'  #'D:/Dunkelflaute/Data/'
-path_to_plot      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
+path_to_data      = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/Dunkelflaute_plots/Data/'
+path_to_plot      = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'
+#path_to_data      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/Data/'  #'D:/Dunkelflaute/Data/'
+#path_to_plot      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
 plot_format  = 'png'
 
 droughttypes = ['LWS', 'RL', 'DD', 'CF']
@@ -204,7 +206,7 @@ for c in range(len(zones_szon)):
     axs[idx, idy].legend(facecolor="white", loc='upper center', framealpha=1)
     
     plt.tight_layout()
-    plt.savefig(path_to_plot+'DistributionThreshold_PECD4_'+zones_szon[c]+'_TY'+str(ty_pecd4)+'.'+plot_format,dpi=300)
+    plt.savefig(path_to_plot+'Other_figures/DistributionThreshold_PECD4_'+zones_szon[c]+'_TY'+str(ty_pecd4)+'.'+plot_format,dpi=300)
     plt.close()
     
     
@@ -264,7 +266,7 @@ for c in range(len(zones_szon)):
     axs[idx, idy].legend(facecolor="white", loc='upper center', framealpha=1)
     
     plt.tight_layout()
-    plt.savefig(path_to_plot+'DistributionThreshold_PECD3_'+zones_szon[c]+'_TY'+str(ty_pecd3)+'.'+plot_format,dpi=300)
+    plt.savefig(path_to_plot+'Other_figures/DistributionThreshold_PECD3_'+zones_szon[c]+'_TY'+str(ty_pecd3)+'.'+plot_format,dpi=300)
     plt.close()
 
 #%% Calculate Annual Statistics
@@ -350,7 +352,7 @@ for c in range(len(zones_szon)):
         
         
         plt.tight_layout()
-        plt.savefig(path_to_plot+'DF_AnnualStatistics_'+droughttypes[d]+'_ScenarioComparison_'+zones_szon[c]+'.'+plot_format,dpi=300)
+        plt.savefig(path_to_plot+'Other_figures/DF_AnnualStatistics_'+droughttypes[d]+'_ScenarioComparison_'+zones_szon[c]+'.'+plot_format,dpi=300)
         plt.close()
     
     # For each Zone and each scenario (3 panels for Nr of events, sum of duration and sum of severity (adapted))
@@ -404,7 +406,7 @@ for c in range(len(zones_szon)):
         
         
         plt.tight_layout()
-        plt.savefig(path_to_plot+'DF_AnnualStatistics_'+scenarios[s].replace('/','_')+'_DroughttypesComparison_'+zones_szon[c]+'.'+plot_format,dpi=300)
+        plt.savefig(path_to_plot+'Other_figures/DF_AnnualStatistics_'+scenarios[s].replace('/','_')+'_DroughttypesComparison_'+zones_szon[c]+'.'+plot_format,dpi=300)
         plt.close()
         
 
@@ -512,7 +514,7 @@ for c in range(len(zones_szon)):
             axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
         
         plt.tight_layout()
-        plt.savefig(path_to_plot+'DF_EventDistribution_'+droughttypes[d]+'_ScenarioComparison_'+zones_szon[c]+'.'+plot_format,dpi=300)
+        plt.savefig(path_to_plot+'Other_figures/DF_EventDistribution_'+droughttypes[d]+'_ScenarioComparison_'+zones_szon[c]+'.'+plot_format,dpi=300)
         plt.close()
 
 #%% Plot Correlation of Duration/Severity + Linear regression
@@ -574,7 +576,7 @@ for c in range(len(zones_szon)):
     axs[idx].legend(facecolor="white", loc='upper left', framealpha=1)
     
     plt.tight_layout()
-    plt.savefig(path_to_plot+'DF_CorrelationDurationSeverity_'+zones_szon[c]+'.'+plot_format,dpi=300)
+    plt.savefig(path_to_plot+'Correlation/DF_CorrelationDurationSeverity_'+zones_szon[c]+'.'+plot_format,dpi=300)
     plt.close()
 
     
@@ -586,6 +588,10 @@ for c in range(len(zones_szon)):
 # whithout February 29th
 # Grid plot: X=DoY, Y=Year, Colors: White=TN, Blue=FP, Red=FN, Green=TP
 # For each droughttype individual panels
+
+# Currently does not work because some dataset are missing days
+# -> "ValueError: cannot reshape array of size 12740 into shape (35,365)"
+# TODO: Correct issue
 
 def dropLeapDays(df):
     return df[~((df.index.get_level_values('Date').day == 29) & (df.index.get_level_values('Date').month == 2))]
@@ -670,7 +676,7 @@ for c in range(len(zones_szon)):
     
     
     plt.tight_layout()
-    plt.savefig(path_to_plot+'DF_ENSDetectionMatrix_'+ens_dataset+'_'+zones_szon[c]+'.'+plot_format,dpi=300)
+    plt.savefig(path_to_plot+'Timeline/DF_ENSDetectionMatrix_'+ens_dataset+'_'+zones_szon[c]+'.'+plot_format,dpi=300)
     plt.close()
         
         # TODO: Some masks are shorter? Why? In year with leap day the 31.12. is missing (and the leap day...)
@@ -731,7 +737,7 @@ for s in range(1,len(scenarios)):
      
         
         plt.tight_layout()
-        plt.savefig(path_to_plot+'DF_PROJDetectionTimelines_'+scenarios[s].replace('/','_')+'_'+zones_szon[c]+'.'+plot_format,dpi=300)
+        plt.savefig(path_to_plot+'Timeline/DF_PROJDetectionTimelines_'+scenarios[s].replace('/','_')+'_'+zones_szon[c]+'.'+plot_format,dpi=300)
         plt.close()
       
 #%% Plot Correlation of ENS/Severity and ENS/Duration
@@ -815,7 +821,7 @@ for c in range(len(zones_szon)):
     axs[idx, idy].legend(facecolor="white", loc='upper left', framealpha=1)
     
     plt.tight_layout()
-    plt.savefig(path_to_plot+'DF_CorrelationENSSeverity_'+ens_dataset+'_'+zones_szon[c]+'.'+plot_format,dpi=300)
+    plt.savefig(path_to_plot+'Correlation/DF_CorrelationENSSeverity_'+ens_dataset+'_'+zones_szon[c]+'.'+plot_format,dpi=300)
     plt.close()
     
     
@@ -894,7 +900,7 @@ for c in range(len(zones_szon)):
     axs[idx, idy].legend(facecolor="white", loc='upper left', framealpha=1)
     
     plt.tight_layout()
-    plt.savefig(path_to_plot+'DF_CorrelationENSDuration_'+ens_dataset+'_'+zones_szon[c]+'.'+plot_format,dpi=300)
+    plt.savefig(path_to_plot+'Correlation/DF_CorrelationENSDuration_'+ens_dataset+'_'+zones_szon[c]+'.'+plot_format,dpi=300)
     plt.close()
     
 #%% TEMPORÄR
