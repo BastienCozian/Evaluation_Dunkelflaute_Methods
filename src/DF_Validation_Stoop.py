@@ -57,8 +57,10 @@ dt_colors = ['dodgerblue', 'tab:red', '#1e6f4c', 'skyblue', 'burlywood', '#8cc6a
 #LWS_percs = np.linspace(0.0001,0.15,200)
 #LWS_percs = np.linspace(0.0001, 0.15, 40)
 #LWS_percs = np.array([0.0001, 0.002, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15])
-LWS_percs = np.concatenate([np.linspace(0, 0.02, 21)[1:], np.linspace(0.02, 0.04, 11)[1:], 
-                            np.linspace(0.04, 0.08, 11)[1:],  np.linspace(0.08, 0.16, 11)[1:]])
+#LWS_percs = np.concatenate([np.linspace(0, 0.02, 21)[1:], np.linspace(0.02, 0.04, 11)[1:], 
+#                            np.linspace(0.04, 0.08, 11)[1:],  np.linspace(0.08, 0.16, 11)[1:]])
+LWS_percs = np.concatenate([np.linspace(0, 0.02, 51)[1:], np.linspace(0.02, 0.04, 51)[1:], 
+                            np.linspace(0.04, 0.08, 21)[1:],  np.linspace(0.08, 0.16, 11)[1:]])
 #LWS_percs = np.asarray([0.005, 0.01, 0.02, 0.04])
 RL_percs  = 1-LWS_percs
 DD_percs  = 1-LWS_percs
@@ -977,7 +979,6 @@ stat_df.to_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
 stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
 
 
-
 #%%
 # ---------------------------------------------
 #  Plot F / threshold (comparing to ENS / validation)
@@ -987,6 +988,21 @@ stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
 stat_df = pd.read_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
 
 x=stat_df.index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+
+# Percentile for peak F-score
+F_max = stat_df.loc[(x, 'RL3 (T=1)',  'F'),(zone)].max()
+p_max = stat_df.loc[(x, 'RL3 (T=1)',  'F'),(zone)][stat_df.loc[(x, 'RL3 (T=1)',  'F'),(zone)] == F_max].index[0][0]
+print(f"RL3 (T=1): F_max = {F_max}, p_max = {p_max}")
+F_max = stat_df.loc[(x, 'RL3 (T=3)',  'F'),(zone)].max()
+p_max = stat_df.loc[(x, 'RL3 (T=3)',  'F'),(zone)][stat_df.loc[(x, 'RL3 (T=3)',  'F'),(zone)] == F_max].index[0][0]
+print(f"RL3 (T=3): F_max = {F_max}, p_max = {p_max}")
+F_max = stat_df.loc[(x, 'RL3 (T=5)',  'F'),(zone)].max()
+p_max = stat_df.loc[(x, 'RL3 (T=5)',  'F'),(zone)][stat_df.loc[(x, 'RL3 (T=5)',  'F'),(zone)] == F_max].index[0][0]
+print(f"RL3 (T=5): F_max = {F_max}, p_max = {p_max}")
+F_max = stat_df.loc[(x, 'RL3 (T=7)',  'F'),(zone)].max()
+p_max = stat_df.loc[(x, 'RL3 (T=7)',  'F'),(zone)][stat_df.loc[(x, 'RL3 (T=7)',  'F'),(zone)] == F_max].index[0][0]
+print(f"RL3 (T=7): F_max = {F_max}, p_max = {p_max}")
 
 
 fig, axs = plt.subplots(4, 2, figsize=(10,16))
@@ -1136,11 +1152,17 @@ from matplotlib.patches import Patch
 PERIOD_length_days = 7
 PERIOD_cluster_days = 6
 
+# percentile for peak F-score
+#p_max = 0.01
+#p_max = 0.022
+#p_max = 0.0356
+p_max = 0.044
+
 zone = 'DE00'
 
 ens_dataset = 'ERAA23'
 
-figname = f"Timeline_Stoop24_{ens_dataset}_ENS_{zone}_T{PERIOD_length_days}_Tc{PERIOD_cluster_days}"
+figname = f"Timeline_Stoop24_{ens_dataset}_ENS_{zone}_T{PERIOD_length_days}_Tc{PERIOD_cluster_days}_pmax_{int(p_max*1000)}e-3"
 
 # ---------------------------------------------
 # Compute data for figure (~ 15s per variable and percentile)
@@ -1186,8 +1208,7 @@ rl3_CREDI_event, rl3_event_dates, \
     rl3_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
                                         PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
 
-percentile = 0.01
-rl3_thresh = np.quantile(rl3_event_values, q=1-percentile, interpolation="nearest")
+rl3_thresh = np.quantile(rl3_event_values, q=1-p_max, interpolation="nearest")
 
 df_mask_timeline = compute_timeline(data3_ENS_d, rl3_event_dates, rl3_event_values, rl3_thresh, zone, PERIOD_length_days, 
                                     extreme_is_high=True, start_date='1982-01-01', end_date='2016-12-31')
@@ -1201,7 +1222,7 @@ fig, ax = plt.subplots(1, 1, figsize=(10, 4))
 
 #axs.pcolormesh(X1, Y, detmask2matrix(rl3_detmask[zones_szon[c]],X1,Y), cmap=cmap)
 ax.pcolormesh(X1, Y, detmask2matrix(df_mask_timeline[zone],X1,Y), cmap=cmap)
-ax.set_title(f'RL (PECD 3.1, {ens_dataset}, {zone}, T={PERIOD_length_days}, Tc={PERIOD_cluster_days})')
+ax.set_title(f'RL (PECD 3.1, {ens_dataset}, {zone}, T={PERIOD_length_days}, Tc={PERIOD_cluster_days}, p={p_max})')
 ax.set_ylabel('Year')
 ax.set_xlabel('Day of Year')
 ax.legend(handles=legend_elements, facecolor="white", loc='upper center', framealpha=1)
