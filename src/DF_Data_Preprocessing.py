@@ -27,13 +27,13 @@ from Dunkelflaute_function_library import get_daily_values_etm
 
 path_to_pecd4     = 'F:/C3S_PECD_v4.1/'                         #'D:/PECD4_1/'
 path_to_pecd3     = 'F:/PECD3_1/'            #'D:/PECD3_1/'
-path_to_etm_d     = 'F:/Data_Dunkelflaute_analysis/PECD4_ETM_demand/'           #'D:/PECD4_1/ETM_Demand/exports/demand/'
+path_to_etm_d     = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/PECD4_ETM_demand/'           #'D:/PECD4_1/ETM_Demand/exports/demand/'
 path_to_eraa23_d  = '' # This data ended up not being used                  #'D:/ERAA23/Demand Dataset/' 
-path_to_eraa23_ens= 'F:/Data_Dunkelflaute_analysis/ERAA23_ENS/'                 #'D:/ERAA23/ENS/'
-path_to_ao_ens    = 'F:/Data_Dunkelflaute_analysis/Adequacy_Outlook_ENS/'      #'D:/AdequacyOutlook/'
-path_to_pemmdb_c  = 'F:/Data_Dunkelflaute_analysis/PEMMDB_Installed_Capacities/' #'D:/PEMMDB/data_TY2033/01_PEMMDB/'
-path_to_pemmdb_d  = 'F:/Data_Dunkelflaute_analysis/PEMMDB_TY2033_demand/'    #'D:/PEMMDB/data_TY2033/04_LOAD/TY2033/'
-path_to_plot      = 'F:/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
+path_to_eraa23_ens= 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/ERAA23_ENS/'                 #'D:/ERAA23/ENS/'
+path_to_ao_ens    = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/Adequacy_Outlook_ENS/'      #'D:/AdequacyOutlook/'
+path_to_pemmdb_c  = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/PEMMDB_Installed_Capacities/' #'D:/PEMMDB/data_TY2033/01_PEMMDB/'
+path_to_pemmdb_d  = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/PEMMDB_TY2033_demand/'    #'D:/PEMMDB/data_TY2033/04_LOAD/TY2033/'
+path_to_plot      = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/Dunkelflaute_plots/'      #'D:/Dunkelflaute/'
 #path_to_shapefile = 'D:/PECD4_1/ShapeFiles/General/' # Not used
 
 # Countries (NUT0) of interest (must be a list of two letter abbreviations)
@@ -369,7 +369,7 @@ print('Calculated Residual Load for PECDv4.1')
 
 #%% Load the PECD 3.1 data
 # PEMMDB installed capacities with the right target year must be already loaded!
-# If not, run the PEMMDB capacity loding cell before running this cell.
+# If not, run the PEMMDB capacity loading cell before running this cell.
 # Keep track that the same targetyear is chosen!
 
 if not ty==2033:
