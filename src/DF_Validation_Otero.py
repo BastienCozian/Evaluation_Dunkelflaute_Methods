@@ -72,8 +72,8 @@ data4_REP_d = pd.read_pickle(path_to_data+'PECD4_Generation_TY'+str(ty_pecd4)+'_
 data3_REP_d = pd.read_pickle(path_to_data+'PECD3_Generation_TY'+str(ty_pecd3)+'_national_daily.pkl')
 
 # Weight REP for experimenting
-start_date = '1982-01-01 00:00:00'
-end_date   = '2016-12-31 00:00:00'
+start_date = '1982-01-01'
+end_date   = '2016-12-31'
 data3_cropped1 = data3_REP_d.query('Date>=@start_date and Date <= @end_date')
 data4_cropped1 = data4_REP_d.query('Date>=@start_date and Date <= @end_date')
 data3_cropped2 = data3_cropped1[~((data3_cropped1.index.get_level_values(1).day == 29) & (data3_cropped1.index.get_level_values(1).month == 2))]
