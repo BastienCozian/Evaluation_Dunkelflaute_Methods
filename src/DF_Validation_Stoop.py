@@ -35,7 +35,7 @@ path_to_plot      = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dun
 plot_format       = 'png'
 
 # Countries (NUT0) of interest (must be a list of two letter abbreviations)
-countries = ['DE','NL']
+#countries = ['DE','NL','FR']
 
 # Target Years
 ty_pecd3 = 2033
@@ -65,9 +65,9 @@ LWS_percs = np.concatenate([np.linspace(0, 0.02, 51)[1:], np.linspace(0.02, 0.04
 RL_percs  = 1-LWS_percs
 DD_percs  = 1-LWS_percs
         
-zones_peon = zones = get_zones(countries,'PEON')  
-zones_szon = zones = get_zones(countries,'SZON')  
-zones_peof = zones = get_zones(countries,'PEOF')  
+#zones_peon = zones = get_zones(countries,'PEON')  
+#zones_szon = zones = get_zones(countries,'SZON')  
+#zones_peof = zones = get_zones(countries,'PEOF')  
 
 scen_Datespan = [42,51,51,51] # TODO: Automate the nr of years per scenario
 
@@ -90,7 +90,7 @@ data3_REP_h = pd.read_pickle(path_to_data+'PECD3_Generation_TY'+str(ty_pecd3)+'_
 
 # Weight REP for experimenting
 start_date = '1982-01-01 00:00:00'
-end_date   = '2016-12-31 00:00:00'
+end_date   = '2016-12-31 23:00:00'
 data3_cropped1 = data3_REP_h.query('Date>=@start_date and Date <= @end_date')
 data4_cropped1 = data4_REP_h.query('Date>=@start_date and Date <= @end_date')
 data3_gen_h = data3_cropped1[~((data3_cropped1.index.get_level_values(1).day == 29) & (data3_cropped1.index.get_level_values(1).month == 2))]
@@ -101,6 +101,7 @@ data4_RL_h = data4_dem_h - w*data4_gen_h
 
 # TODO: Need to correct the Preprocessing for hourly data (perhaps daily data?) of demand 
 # to account for 2016-12-31T01:00 à 2016-12-31T23:00. Currently, I believe that there is only 2016-12-31T00:00
+# -> Solved: when loading the hourly demand data, the line `end_date   = '2016-12-31 00:00:00'` selected only the first hour of Jan 31st 2016.
 
 # TODO: Use the calendar method of ERAA 2023: calendar of 2018, remove last day of year instead of Feb 29th in leap years.
 # Why? -> 1) there is likely a 1-day shift in the ENS compared to energy variables once every four years
@@ -124,8 +125,8 @@ data4_REP_d = pd.read_pickle(path_to_data+'PECD4_Generation_TY'+str(ty_pecd4)+'_
 data3_REP_d = pd.read_pickle(path_to_data+'PECD3_Generation_TY'+str(ty_pecd3)+'_national_daily.pkl')
 
 # Weight REP for experimenting
-start_date = '1982-01-01 00:00:00'
-end_date   = '2016-12-31 00:00:00'
+start_date = '1982-01-01'
+end_date   = '2016-12-31'
 data3_cropped1 = data3_REP_d.query('Date>=@start_date and Date <= @end_date')
 data4_cropped1 = data4_REP_d.query('Date>=@start_date and Date <= @end_date')
 data3_gen_d = data3_cropped1[~((data3_cropped1.index.get_level_values(1).day == 29) & (data3_cropped1.index.get_level_values(1).month == 2))]
@@ -163,7 +164,7 @@ data4_RL_d = data4_dem_d - w*data4_gen_d
 PERIOD_length_days = 1
 PERIOD_cluster_days = 1
 
-zone = 'DE00'
+zone = 'FR00'
 
 ens_dataset = 'ERAA23'
 
@@ -279,7 +280,7 @@ ax_big.plot(x, stat_df.loc[(x, 'RL3',  'F'),(zone)], label='RL3',  color=dt_colo
 ax_big.plot(x, stat_df.loc[(x, 'DD3',  'F'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
 ax_big.plot(x, stat_df.loc[(x, 'LWS3',  'F'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 ax_big.set_ylabel('F-Score')
-ax_big.set_xlabel('Fraction of events classified as drought')
+ax_big.set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
 axs[0,0].remove()
@@ -290,7 +291,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'TP'),(zone)], label='RL3',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'TP'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'TP'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[zone])+' in total)\n(DF detected, when ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -300,7 +301,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'TN'),(zone)], label='RL3',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'TN'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'TN'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[zone])+' in total)\n(no DF detected, when no ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -310,7 +311,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'FP'),(zone)], label='RL3',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'FP'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'FP'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[zone])+' in total)\n(DF detected, when no ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -320,7 +321,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'FN'),(zone)], label='RL3',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'FN'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'FN'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[zone])+' in total)\n(No DF detected, when ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -330,7 +331,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'PR'),(zone)], label='RL3',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'PR'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'PR'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].set_ylabel('Precision (out of '+str(nr_of_pos[zone])+' in total)\n(How many detected droughts are ENS?)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -340,7 +341,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3',  'RE'),(zone)], label='RL3',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'DD3',  'RE'),(zone)], label='DD3',  color=dt_colors[1], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'RE'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].set_ylabel('Recall (out of '+str(nr_of_pos[zone])+' in total)\n(How many ENS are identified as droughts?)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -526,7 +527,7 @@ ax_big.plot(x, stat_df.loc[(x, 'DD4',  'F'),(zone)], label='DD4',  color=dt_colo
 ax_big.plot(x, stat_df.loc[(x, 'LWS3',  'F'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 ax_big.plot(x, stat_df.loc[(x, 'LWS4',  'F'),(zone)], label='LWS4',  color=dt_colors[5], alpha=0.8)
 ax_big.set_ylabel('F-Score')
-ax_big.set_xlabel('Fraction of events classified as drought')
+ax_big.set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
 axs[0,0].remove()
@@ -540,7 +541,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'DD4',  'TP'),(zone)], label='DD4',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'TP'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS4',  'TP'),(zone)], label='LWS4',  color=dt_colors[5], alpha=0.8)
 axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[zone])+' in total)\n(DF detected, when ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -553,7 +554,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'DD4',  'TN'),(zone)], label='DD4',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'TN'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS4',  'TN'),(zone)], label='LWS4',  color=dt_colors[5], alpha=0.8)
 axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[zone])+' in total)\n(no DF detected, when no ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -566,7 +567,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'DD4',  'FP'),(zone)], label='DD4',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'FP'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS4',  'FP'),(zone)], label='LWS4',  color=dt_colors[5], alpha=0.8)
 axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[zone])+' in total)\n(DF detected, when no ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -579,7 +580,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'DD4',  'FN'),(zone)], label='DD4',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'FN'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS4',  'FN'),(zone)], label='LWS4',  color=dt_colors[5], alpha=0.8)
 axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[zone])+' in total)\n(No DF detected, when ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -592,7 +593,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'DD4',  'PR'),(zone)], label='DD4',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'PR'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS4',  'PR'),(zone)], label='LWS4',  color=dt_colors[5], alpha=0.8)
 axs[idx, idy].set_ylabel('Precision (out of '+str(nr_of_pos[zone])+' in total)\n(How many detected droughts are ENS?)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -605,7 +606,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'DD4',  'RE'),(zone)], label='DD4',  color
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS3',  'RE'),(zone)], label='LWS3',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'LWS4',  'RE'),(zone)], label='LWS4',  color=dt_colors[5], alpha=0.8)
 axs[idx, idy].set_ylabel('Recall (out of '+str(nr_of_pos[zone])+' in total)\n(How many ENS are identified as droughts?)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -760,7 +761,7 @@ ax_big = plt.subplot(4, 1, 1)
 ax_big.plot(x, stat_df.loc[(x, 'RL3 HRW',  'F'),(zone)], label='RL3 HRW',  color=dt_colors[0], alpha=0.8)
 ax_big.plot(x, stat_df.loc[(x, 'RL3 HWRW',  'F'),(zone)], label='RL3 HWRW',  color=dt_colors[3], alpha=0.8)
 ax_big.set_ylabel('F-Score')
-ax_big.set_xlabel('Fraction of events classified as drought')
+ax_big.set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
 axs[0,0].remove()
@@ -770,7 +771,7 @@ idx, idy = 1, 0
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HRW',  'TP'),(zone)], label='RL3 HRW',  color=dt_colors[0], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HWRW',  'TP'),(zone)], label='RL3 HWRW',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[zone])+' in total)\n(DF detected, when ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -779,7 +780,7 @@ idx, idy = 1, 1
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HRW',  'TN'),(zone)], label='RL3 HRW',  color=dt_colors[0], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HWRW',  'TN'),(zone)], label='RL3 HWRW',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[zone])+' in total)\n(no DF detected, when no ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -788,7 +789,7 @@ idx, idy = 2, 0
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HRW',  'FP'),(zone)], label='RL3 HRW',  color=dt_colors[0], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HWRW',  'FP'),(zone)], label='RL3 HWRW',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[zone])+' in total)\n(DF detected, when no ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -797,7 +798,7 @@ idx, idy = 2, 1
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HRW',  'FN'),(zone)], label='RL3 HRW',  color=dt_colors[0], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HWRW',  'FN'),(zone)], label='RL3 HWRW',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[zone])+' in total)\n(No DF detected, when ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -806,7 +807,7 @@ idx, idy = 3, 0
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HRW',  'PR'),(zone)], label='RL3 HRW',  color=dt_colors[0], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HWRW',  'PR'),(zone)], label='RL3 HWRW',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('Precision (out of '+str(nr_of_pos[zone])+' in total)\n(How many detected droughts are ENS?)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -815,7 +816,7 @@ idx, idy = 3, 1
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HRW',  'RE'),(zone)], label='RL3 HRW',  color=dt_colors[0], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 HWRW',  'RE'),(zone)], label='RL3 HWRW',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('Recall (out of '+str(nr_of_pos[zone])+' in total)\n(How many ENS are identified as droughts?)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -1016,7 +1017,7 @@ ax_big.plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'F'),(zone)], label='RL3 (T=3)',  c
 ax_big.plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'F'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 ax_big.plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'F'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 ax_big.set_ylabel('F-Score')
-ax_big.set_xlabel('Fraction of events classified as drought')
+ax_big.set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
 axs[0,0].remove()
@@ -1035,7 +1036,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'TP'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'TP'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'TP'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('True Positives in total)\n(DF detected, when ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -1046,7 +1047,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'TN'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'TN'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'TN'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('True Negatives in total)\n(no DF detected, when no ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -1057,7 +1058,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'FP'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'FP'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'FP'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('False Positives in total)\n(DF detected, when no ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -1068,7 +1069,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'FN'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'FN'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'FN'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('False Negatives in total)\n(No DF detected, when ENS)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -1079,7 +1080,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'PR'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'PR'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'PR'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('Precision in total)\n(How many detected droughts are ENS?)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -1090,7 +1091,7 @@ axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=3)',  'RE'),(zone)], label='RL3 (T
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=5)',  'RE'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(x, stat_df.loc[(x, 'RL3 (T=7)',  'RE'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('Recall in total)\n(How many ENS are identified as droughts?)')
-axs[idx, idy].set_xlabel('Fraction of events classified as drought')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
