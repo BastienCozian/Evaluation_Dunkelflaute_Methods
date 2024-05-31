@@ -504,3 +504,144 @@ def lin_reg(x, y):
     regtrend = y[-1]-y[0]
     
     return regdf, reg.intercept, reg.slope, reg.rvalue, reg.pvalue, regtrend
+
+
+
+
+
+
+
+
+
+def assign_SZON(input_pecd_zones, level):
+    '''
+    Assign to each PEON/PEOF zone a SZON zone.
+    Goal: aggregate production at SZON level from data only defined at PEON level
+    Do not mix PEON zones and PEOF zones!
+
+    Parameters
+    ----------
+    input_pecd_zones : list
+        list of PEON or PEOF zones
+
+    level : str
+        'PEON' or 'PEOF'
+    
+    Returns
+    -------
+    output_szon_zones : list
+        list of SZON zones
+        '''
+        
+    peon_zones = ['AL00','AT01','AT02','AT03','BA00','BE01','BE02','BE03','BG01',
+                    'BG02','CH00','CY00','CZ01','CZ02','DE01','DE02','DE03','DE04',
+                    'DE05','DE06','DE07','DKE1','DKW1','DZ01','DZ02','DZ03','EE00',
+                    'EG00','ES01','ES02','ES03','ES04','ES05','ES06','ES07','ES08',
+                    'ES09','ES10','ES11','ES12','FI01','FI02','FR01','FR02','FR03',
+                    'FR04','FR05','FR06','FR07','FR08','FR09','FR10','FR11','FR12',
+                    'FR13','FR14','FR15','GR01','GR02','GR03','HR01','HR02','HU01',
+                    'HU02','HU03','IE00','IL00','IS00','ITCA','ITCN','ITCS','ITN1',
+                    'ITS1','ITSA','ITSI','JO00','LB00','LT00','LU00','LV00','LY01',
+                    'LY02','LY03','MA01','MA02','MA03','MA04','MA05','MA06','MD00',
+                    'ME00','MK00','MT00','NL01','NL02','NL03','NL04','NOM1','NON1',
+                    'NOS1','NOS2','NOS3','PL01','PL02','PL03','PL04','PL05','PS00',
+                    'PT01','PT02','RO01','RO02','RO03','RS01','SE01','SE02','SE03',
+                    'SE04','SI00','SK00','SY00','TN01','TN02','TN03','TN04','TN05',
+                    'TN06','TN07','TN08','TR01','TR02','TR03','TR04','TR05','TR06',
+                    'TR07','TR08','TR09','TR10','TR11','TR12','TR13','TR14','TR15',
+                    'UA01','UA02','UK01','UK02','UK03','UK04','UK05','UKNI','XK00']
+
+    peof_zones = ['AL00_OFF','BA00_OFF','BE01_OFF','BG01_OFF','CY00_OFF','DBOT_OFF',
+                    'DBUK_OFF','DE011_OFF','DE012_OFF','DE013_OFF','DE02_OFF','DKBI_OFF',
+                    'DKE1_OFF','DKKF_OFF','DKW11_OFF','DKW12_OFF','DZ00_OFF','EE00_OFF',
+                    'EG00_OFF','ES01_OFF','ES02_OFF','ES04_OFF','ES06_OFF','ES09_OFF',
+                    'ES10_OFF','ES11_OFF','FI01_OFF','FI02_OFF','FR01_OFF','FR02_OFF',
+                    'FR03_OFF','FR04_OFF','FR08_OFF','FR09_OFF','FR13_OFF','GR01_OFF',
+                    'GR02_OFF','GR03_OFF','HR01_OFF','IE00_OFF','IL00_OFF','IS00_OFF',
+                    'ITCA_OFF','ITCN_OFF','ITCS_OFF','ITN1_OFF','ITS1_OFF','ITSA_OFF',
+                    'ITSI_OFF','JO00_OFF','LB00_OFF','LT00_OFF','LV00_OFF','LY01_OFF',
+                    'LY02_OFF','MA01_OFF','MA02_OFF','MA04_OFF','MA05_OFF','MA06_OFF',
+                    'ME00_OFF','MT00_OFF','NL011_OFF','NL012_OFF','NL031_OFF','NL032_OFF',
+                    'NL033_OFF','NOM1_OFF','NON1_OFF','NOS21_OFF','NOS22_OFF','NOS3_OFF',
+                    'PL04_OFF','PL05_OFF','PS00_OFF','PT01_OFF','PT02_OFF','RO03_OFF',
+                    'SE01_OFF','SE02_OFF','SE03_OFF','SE04_OFF','SI00_OFF','SY00_OFF',
+                    'TN01_OFF','TN02_OFF','TN04_OFF','TN06_OFF','TN07_OFF','TR01_OFF',
+                    'TR02_OFF','TR03_OFF','TR04_OFF','TR06_OFF','TR07_OFF','TR10_OFF',
+                    'TR11_OFF','UA02_OFF','UK011_OFF','UK012_OFF','UK02_OFF','UK031_OFF',
+                    'UK032_OFF','UK041_OFF','UK042_OFF','UK043_OFF','UK051_OFF',
+                    'UK052_OFF','UK053_OFF','UKNI_OFF']
+
+    szon_zones = ['AL00','AT00','BA00','BE00','BG00','CH00','CY00','CZ00','DE00',
+                    'DKE1','DKW1','DZ00','EE00','EG00','ES00','FI00','FR00','FR15',
+                    'GR00','GR03','HR00','HU00','IE00','IL00','IS00','ITCA','ITCN',
+                    'ITCS','ITN1','ITS1','ITSA','ITSI','JO00','LB00','LT00','LU00',
+                    'LV00','LY00','MA00','MD00','ME00','MK00','MT00','NL00','NOM1',
+                    'NON1','NOS0','PL00','PS00','PT00','RO00','RS00','SE01','SE02',
+                    'SE03','SE04','SI00','SK00','SY00','TN00','TR00','UA01','UA02',
+                    'UK00','UKNI']
+
+    output_szon_zones = []
+    peon_is_szon = []
+
+    # List all PEON zones that are also a SZON zone
+    for peon_zone in peon_zones:
+        if peon_zone in szon_zones:
+            peon_is_szon.append(peon_zone)
+
+    if level == 'PEON':
+
+        for peon_zone in input_pecd_zones:
+            if peon_zone in szon_zones:
+                # If PEON = SZON, then PEON -> SZON
+                output_szon_zones.append(peon_zone)
+            else:
+                # Get the SZON zone of the country, and remove the SZON zones that are also PEON zone.
+                # Only one SZON should remain
+                single_other_szon = set(get_zones([peon_zone[:2]], 'SZON')) - set(peon_is_szon)
+                output_szon_zones.append(single_other_szon.pop())
+
+    elif level == 'PEOF':
+
+        for peof_zone in input_pecd_zones:
+
+            peof_zone_cut = peof_zone[:-4]
+
+            if peof_zone_cut in peon_zones:
+                # if PEOF without "_OFF" is a PEON name, then do the same as for PEON
+
+                if peof_zone_cut in szon_zones:
+                    # If PEON = SZON, then PEON -> SZON
+                    output_szon_zones.append(peof_zone_cut)
+                else:
+                    # Get the SZON zone of the country, and remove the SZON zones that are also PEON zone.
+                    # Only one SZON should remain
+                    single_other_szon = set(get_zones([peof_zone_cut[:2]], 'SZON')) - set(peon_is_szon)
+                    output_szon_zones.append(single_other_szon.pop())
+
+            else:
+                # If PEOF without "_OFF" is is not a PEON name, then it is a special case handled manually
+                if peof_zone in ['DE011_OFF','DE012_OFF','DE013_OFF']:
+                    output_szon_zones.append('DE00')
+                elif peof_zone in ['DKBI_OFF','DKKF_OFF']:
+                    # Assume DKBI_OFF and DKKF_OFF -> DKE1, but not sure of that choice. 
+                    output_szon_zones.append('DKE1')
+                elif peof_zone in ['DKW11_OFF','DKW12_OFF']:
+                    output_szon_zones.append('DKW1')
+                elif peof_zone in ['NL011_OFF','NL012_OFF','NL031_OFF','NL032_OFF','NL033_OFF']:
+                    output_szon_zones.append('NL00')          
+                elif peof_zone in ['NOS21_OFF','NOS22_OFF']:
+                    output_szon_zones.append('NOS0')
+                elif peof_zone in ['UK011_OFF','UK012_OFF','UK031_OFF','UK032_OFF','UK041_OFF','UK042_OFF','UK043_OFF','UK051_OFF','UK052_OFF','UK053_OFF']:
+                    output_szon_zones.append('UK00')
+                else:
+                    print(f'WARNING: Could not assign a SZON to {peof_zone}.')
+
+    else:
+        print(f"ERROR: '{level}' should be 'PEON' or 'PEOF'.")
+        
+
+    # Check
+    #for a, b in zip(input_pecd_zones, output_szon_zones):
+    #    print(f'{a} -> {b}')
+
+    return output_szon_zones
