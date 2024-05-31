@@ -771,13 +771,14 @@ def get_correlation_CREDI(df_ENS, event_dates, event_values, threshold, common_i
 
     only_true_positive : bool
         True -> only include 'True Positive', i.e. DF event with ENS
-        False -> also include 'False Negative' (ENS but no DF) and 'False Positive' (DF but no ENS)
+        False -> also include 'False Positive' (DF but no ENS), to know the correlation between the DF method and the ENS
 
     Returns
     -------
 
     DF_values : Numpy array
         CREDI value of DF events
+        Units: GWh
 
     sum_ENS_values : Numpy array
         Sum of ENS occuring in a CREDI event. ENS event is not detected by a CREDI event, then it is the value of a single ENS event.
@@ -837,12 +838,14 @@ def get_correlation_CREDI(df_ENS, event_dates, event_values, threshold, common_i
         if ENS_date in common_index:
         
             if ENS_in_DF[i] == 0:
-
+                
+                """
                 if not(only_true_positive):
                     #false_negative += 1
-                    # Add to the list a zero value for DF ???
+                    # Add to the list a zero value for DF
                     sum_ENS_values = sum_ENS_values + [ENS_values[i]]
                     DF_values = DF_values + [0]
+                """
 
         else:
             print(f'Warning: the Dunkelflaute date period does not include the ENS date {ENS_date}.')
