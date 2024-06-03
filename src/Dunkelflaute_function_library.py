@@ -299,9 +299,14 @@ def get_thresholds(data, perc, start_date='1980-01-01', end_date='2016-12-31', e
     
     # Calculate cumulative distributions (either empirical=occurances, or based on generation)
     if empirical:
-        cumu_x = np.sort(np.array(tmp_data_thresh ,dtype=float), axis=0)
+        sorted = np.sort(np.array(tmp_data_thresh ,dtype=float), axis=0)
         # Filter out nan values
-        cumu_x = cumu_x[~np.isnan(cumu_x).any(axis=1), :]
+        # Old version (below) whould remove any time step whoich is nan for at least one country
+        #cumu_x[~np.isnan(cumu_x).any(axis=1), :]
+        # Attempt new version (below) remove countries with at least one timestep as NaN (not sure this is useful but we keep it for consistency for now)
+        #cumu_x = sorted[:,~np.isnan(sorted).any(axis=0)] 
+        # New version: do not remove NaN, as it is dealed with most of the time later
+        cumu_x = sorted
         mdays = np.arange(0,cumu_x.shape[0])
         cumu_y = np.meshgrid(np.arange(cumu_x.shape[1]),mdays)[1] # creates arrays with columns = zones_szon and rows = cumulative nr of days
         cumu_y = cumu_y/cumu_y[-1,:]
