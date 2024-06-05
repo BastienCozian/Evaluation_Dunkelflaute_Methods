@@ -33,4 +33,4 @@ The analysis results are saved (namely a dataframe consiting of all individual p
 
 ## Dependencies
 
-Use ``conda env create -f environment.yml `` to install this project's dependencies and create a ``dunkelflaute_analysis`` conda-environment.
+Use ``conda env create -f environment.yml`` to install this project's dependencies and create a ``dunkelflaute_analysis`` conda-environment.
