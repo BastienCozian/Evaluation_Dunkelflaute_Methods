@@ -209,7 +209,7 @@ p_max = 0.022
 #p_max = 0.0356
 #p_max = 0.044
 
-zone = 'DE00'
+zone = 'NL00'
 
 ens_dataset = 'ERAA23'
 
@@ -308,13 +308,21 @@ PERIOD_length_days = 7
 # Clustering period. If PERIOD_length_days < PERIOD_cluster_days, then there may be overlaps. We authorize up to 25% overlap.
 PERIOD_cluster_days = 6
 
+zone = 'FR00'
+
 # percentile for peak F-score. Computed in `DF_Validation_Stoop.py`
+# FOR DE00
 #p_max = 0.01
 #p_max = 0.022
 #p_max = 0.0356
-p_max = 0.044
+#p_max = 0.044
 
-zone = 'DE00'
+# FOR FR00
+#p_max = 0.0044
+#p_max = 0.026
+#p_max = 0.0276
+p_max = 0.0204
+
 
 ens_dataset = 'ERAA23'
 
@@ -340,11 +348,11 @@ else:
 
 # Generate masked data
 ens_mask = mask_data(data3_ENS_d, 0, False, 2, 0)
-common_index = data3_RL_h.loc[('HIST')].index.intersection(ens_mask.index)
+common_index = data3_RL_h.loc[('HIST')][[zone]].index.intersection(ens_mask.index)
 
 # Get CREDI events
 rl3_CREDI_event, rl3_event_dates, \
-    rl3_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
+    rl3_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')][[zone]], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
                                         PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
 
 rl3_thresh = np.quantile(rl3_event_values, q=1-p_max, interpolation="nearest")
@@ -367,10 +375,13 @@ x = rl3_DF_all
 y = rl3_sum_ENS_all
 # Linear regression
 df_reg, intercept, slope, r_value, p_value, reg_trend = lin_reg(x, y)
+"""
 if p_value < 0.05:
     ls  = 'solid'
 else:
     ls = 'dotted'
+"""
+ls  = 'solid'
 ax.scatter(x, y, color=dt_colors[3], label=f'RL (r={np.round(r_value, 2)})', alpha=1)
 ax.plot(df_reg, c=dt_colors[3], linestyle=ls)
 print(f' RL  (3.1) intercept={intercept}, slope={slope}, r_value={r_value}, p_value={p_value}, reg_trend={reg_trend}')
@@ -380,10 +391,13 @@ x = rl3_DF_TP
 y = rl3_sum_ENS_TP
 # Linear regression
 df_reg, intercept, slope, r_value, p_value, reg_trend = lin_reg(x, y)
+"""
 if p_value < 0.05:
     ls  = 'solid'
 else:
     ls = 'dotted'
+"""
+ls  = 'solid'
 ax.scatter(x, y, color=dt_colors[0], label=f'RL only TP (r={np.round(r_value, 2)})', alpha=1)
 ax.plot(df_reg, c=dt_colors[0], linestyle=ls)
 print(f' RL  (3.1) intercept={intercept}, slope={slope}, r_value={r_value}, p_value={p_value}, reg_trend={reg_trend}')
