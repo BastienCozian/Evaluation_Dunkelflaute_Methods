@@ -18,6 +18,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.pylab as pylab
 import matplotlib.transforms as mtransforms
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
 from datetime import timedelta
 import datetime as dtime
 import time
@@ -164,7 +166,7 @@ data4_RL_d = data4_dem_d - w*data4_gen_d
 PERIOD_length_days = 1
 PERIOD_cluster_days = 1
 
-zone = 'FR00'
+zone = 'NOS1'
 
 ens_dataset = 'ERAA23'
 
@@ -187,7 +189,7 @@ PERIOD_stride = 24
 if ens_dataset=='AO':
     data3_ENS_d = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')
 elif ens_dataset=='ERAA23':
-    data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
+    data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')
 else:
     raise KeyError('ENS Dataset not existent!')
 
@@ -1301,7 +1303,7 @@ ax_big.plot(T3_thresh_list, stat_df.loc[(x, 'RL3 (T=3)',  'F'),(zone)], label='R
 ax_big.plot(T5_thresh_list, stat_df.loc[(x, 'RL3 (T=5)',  'F'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 ax_big.plot(T7_thresh_list, stat_df.loc[(x, 'RL3 (T=7)',  'F'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 ax_big.set_ylabel('F-Score')
-ax_big.set_xlabel("Threshold value (average CREDI value [GW])")
+ax_big.set_xlabel("Threshold value (average CREDI value [GWh/h])")
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
 axs[0,0].remove()
@@ -1320,7 +1322,7 @@ axs[idx, idy].plot(T3_thresh_list, stat_df.loc[(x, 'RL3 (T=3)',  'TP'),(zone)], 
 axs[idx, idy].plot(T5_thresh_list, stat_df.loc[(x, 'RL3 (T=5)',  'TP'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(T7_thresh_list, stat_df.loc[(x, 'RL3 (T=7)',  'TP'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('True Positives in total)\n(DF detected, when ENS)')
-axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GW])")
+axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GWh/h])")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -1331,7 +1333,7 @@ axs[idx, idy].plot(T3_thresh_list, stat_df.loc[(x, 'RL3 (T=3)',  'TN'),(zone)], 
 axs[idx, idy].plot(T5_thresh_list, stat_df.loc[(x, 'RL3 (T=5)',  'TN'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(T7_thresh_list, stat_df.loc[(x, 'RL3 (T=7)',  'TN'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('True Negatives in total)\n(no DF detected, when no ENS)')
-axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GW])")
+axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GWh/h])")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -1342,7 +1344,7 @@ axs[idx, idy].plot(T3_thresh_list, stat_df.loc[(x, 'RL3 (T=3)',  'FP'),(zone)], 
 axs[idx, idy].plot(T5_thresh_list, stat_df.loc[(x, 'RL3 (T=5)',  'FP'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(T7_thresh_list, stat_df.loc[(x, 'RL3 (T=7)',  'FP'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('False Positives in total)\n(DF detected, when no ENS)')
-axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GW])")
+axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GWh/h])")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -1353,7 +1355,7 @@ axs[idx, idy].plot(T3_thresh_list, stat_df.loc[(x, 'RL3 (T=3)',  'FN'),(zone)], 
 axs[idx, idy].plot(T5_thresh_list, stat_df.loc[(x, 'RL3 (T=5)',  'FN'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(T7_thresh_list, stat_df.loc[(x, 'RL3 (T=7)',  'FN'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('False Negatives in total)\n(No DF detected, when ENS)')
-axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GW])")
+axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GWh/h])")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -1364,7 +1366,7 @@ axs[idx, idy].plot(T3_thresh_list, stat_df.loc[(x, 'RL3 (T=3)',  'PR'),(zone)], 
 axs[idx, idy].plot(T5_thresh_list, stat_df.loc[(x, 'RL3 (T=5)',  'PR'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(T7_thresh_list, stat_df.loc[(x, 'RL3 (T=7)',  'PR'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('Precision in total)\n(How many detected droughts are ENS?)')
-axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GW])")
+axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GWh/h])")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -1375,7 +1377,7 @@ axs[idx, idy].plot(T3_thresh_list, stat_df.loc[(x, 'RL3 (T=3)',  'RE'),(zone)], 
 axs[idx, idy].plot(T5_thresh_list, stat_df.loc[(x, 'RL3 (T=5)',  'RE'),(zone)], label='RL3 (T=5)',  color=dt_colors[2], alpha=0.8)
 axs[idx, idy].plot(T7_thresh_list, stat_df.loc[(x, 'RL3 (T=7)',  'RE'),(zone)], label='RL3 (T=7)',  color=dt_colors[3], alpha=0.8)
 axs[idx, idy].set_ylabel('Recall in total)\n(How many ENS are identified as droughts?)')
-axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GW])")
+axs[idx, idy].set_xlabel("Threshold value (average CREDI value [GWh/h])")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -1731,6 +1733,492 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 
 
 
+#%%
+# =================================================================
+# Plot F-score | Compare old and new dataset
+# =================================================================
+
+# ---------------------------------------------
+# User defined parameters
+# ---------------------------------------------
+
+PERIOD_length_days = 1
+PERIOD_cluster_days = 1
+
+zone = 'SE04'
+
+ens_dataset = 'ERAA23'
+
+figname = f"Validation_Stoop24_all_new_ENS_{zone}_T{PERIOD_length_days}"
+
+
+# ---------------------------------------------
+# Compute data for figure (~ 15s per variable and percentile)
+# ---------------------------------------------
+start_time = time.time()
+
+## Length of the period to consider for CREDI assessment (in hours)
+# add 1 to get indexes that make sense 
+PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
+
+# Sampling of the period (in hours)
+PERIOD_stride = 24
+
+
+
+# For every percentile threshold
+# TODO: the results F, TP, FN, ... are Series objects, so that pd.concat doesn't work
+# Change the get_f_score method so that the results is a proper dataframe containing all the statistics
+# Then delete the concatting of the STatistics and directly continue with appending the drought types
+
+# TODO: Dirty -> I used an old piece of code, I should update that:
+data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')[[zone]]
+ens_mask = mask_data(data3_ENS_d, 0, False, 2, 0)
+nr_of_pos = (ens_mask==2).sum()
+nr_of_neg = (ens_mask==0).sum()
+
+common_index = data3_RL_h.loc[('HIST')].index.intersection(ens_mask.index)
+
+# Get CREDI events
+rl3_CREDI_event, rl3_event_dates, \
+    rl3_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')][[zone]], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
+                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
+
+stat_df = dict()
+for scenario_EVA in ['A', 'B']:
+    stat_df[scenario_EVA] = dict()
+    for FOS in range(1, 15+1):
+
+        data3_ENS_d = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_daily.pkl')[[zone]]
+        
+        p_list  = []
+        for p in range(len(LWS_percs)):
+            # find capacity thresholds
+            # Percentile is computed on the clustered events ("independent" events)
+            # interpolation="nearest" gives the same result as Benjamin B.'s "empirical=True" in the function "get_thresholds"
+            rl3_thresh = np.quantile(rl3_event_values, q=RL_percs[p], interpolation="nearest")
+
+            # Calculate F (compared to ENS)
+            rl3_stat = get_f_score_CREDI_new(data3_ENS_d, rl3_event_dates, rl3_event_values, rl3_thresh, common_index, zone, 
+                                            PERIOD_length_days=1, extreme_is_high=True, beta=1)
+
+            # Create Dataframe
+            p_list.append( pd.concat([rl3_stat], 
+                                    keys=['RL'],   names=['Drought type']))
+            print('Done '+str(p+1)+'/'+str(len(LWS_percs)))
+        stat_df[scenario_EVA][FOS] = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
+ 
+end_time = time.time()
+print(f"Duration: {timedelta(seconds=end_time - start_time)}")
+
+# Save the Data
+# DataFrame: multiindex = (LWS3, LWS4, RL3, RL4),(F, TP, FN, FP, TN),(threshholds);  columns=countries
+#stat_df.to_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+#stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
+
+
+#%%
+# ---------------------------------------------
+#  Plot F / threshold (comparing to ENS / validation)
+# ---------------------------------------------
+
+# Load data
+#stat_df = pd.read_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+
+x=stat_df['A'][1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+# Get values for old dataset
+#stat_df_old =  pd.read_pickle(f"{path_to_plot}Plot_data/Validation_Stoop24_ERAA23_ENS_{zone}_T{PERIOD_length_days}_stats.pkl")
+
+quantiles_dict = dict()
+min_dict = dict()
+max_dict = dict()
+for scenario_EVA in ['A', 'B']:
+    quantiles_dict[scenario_EVA] = dict()
+    min_dict[scenario_EVA] = dict()
+    max_dict[scenario_EVA] = dict()
+    for metric in ['F', 'TP', 'TN', 'FP', 'FN', 'PR', 'RE']:
+        quantiles_dict[scenario_EVA][metric] = np.quantile([stat_df[scenario_EVA][FOS].loc[(x, 'RL',  metric),(zone)] for FOS in range(1, 15+1)], [0.25, 0.5, 0.75], axis=0)
+        min_dict[scenario_EVA][metric] = np.min([stat_df[scenario_EVA][FOS].loc[(x, 'RL',  metric),(zone)] for FOS in range(1, 15+1)], axis=0)
+        max_dict[scenario_EVA][metric] = np.max([stat_df[scenario_EVA][FOS].loc[(x, 'RL',  metric),(zone)] for FOS in range(1, 15+1)], axis=0)
+
+
+fig, axs = plt.subplots(4, 2, figsize=(10,16))
+fig.suptitle('Stoop Method for '+zone+' using new ENS dataset')
+
+# Event time series
+idx, idy = 0, [0,1]
+ax_big = plt.subplot(4, 1, 1)
+metric = 'F'
+#ax_big.plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+ax_big.plot(x, quantiles_dict['A'][metric][1], label='RL (Scenario A)',  color=dt_colors[1], alpha=0.8)
+ax_big.fill_between(x, quantiles_dict['A'][metric][0], quantiles_dict['A'][metric][2], color=dt_colors[1], alpha=0.5)
+ax_big.plot(x, min_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+ax_big.plot(x, max_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+ax_big.plot(x, quantiles_dict['B'][metric][1], label='RL (Scenario B)',  color=dt_colors[2], alpha=0.8)
+ax_big.fill_between(x, quantiles_dict['B'][metric][0], quantiles_dict['B'][metric][2], color=dt_colors[2], alpha=0.5)
+ax_big.plot(x, min_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+ax_big.plot(x, max_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+ax_big.set_ylabel('F-Score')
+ax_big.set_xlabel("Threshold value (average CREDI value [GWh/h])")
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
+axs[0,0].remove()
+axs[0,1].remove()
+
+idx, idy = 1, 0
+metric = 'TP'
+#axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['A'][metric][1], label='RL (Scenario A)',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['A'][metric][0], quantiles_dict['A'][metric][2], color=dt_colors[1], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['B'][metric][1], label='RL (Scenario B)',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['B'][metric][0], quantiles_dict['B'][metric][2], color=dt_colors[2], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[zone])+' in total)\n(DF detected, when ENS)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 1, 1
+metric = 'TN'
+#axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['A'][metric][1], label='RL (Scenario A)',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['A'][metric][0], quantiles_dict['A'][metric][2], color=dt_colors[1], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['B'][metric][1], label='RL (Scenario B)',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['B'][metric][0], quantiles_dict['B'][metric][2], color=dt_colors[2], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[zone])+' in total)\n(no DF detected, when no ENS)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 2, 0
+metric = 'FP'
+#axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['A'][metric][1], label='RL (Scenario A)',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['A'][metric][0], quantiles_dict['A'][metric][2], color=dt_colors[1], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['B'][metric][1], label='RL (Scenario B)',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['B'][metric][0], quantiles_dict['B'][metric][2], color=dt_colors[2], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[zone])+' in total)\n(DF detected, when no ENS)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 2, 1
+metric = 'FN'
+#axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['A'][metric][1], label='RL (Scenario A)',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['A'][metric][0], quantiles_dict['A'][metric][2], color=dt_colors[1], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['B'][metric][1], label='RL (Scenario B)',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['B'][metric][0], quantiles_dict['B'][metric][2], color=dt_colors[2], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[zone])+' in total)\n(No DF detected, when ENS)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 3, 0
+metric = 'PR'
+#axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['A'][metric][1], label='RL (Scenario A)',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['A'][metric][0], quantiles_dict['A'][metric][2], color=dt_colors[1], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['B'][metric][1], label='RL (Scenario B)',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['B'][metric][0], quantiles_dict['B'][metric][2], color=dt_colors[2], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('Precision (out of '+str(nr_of_pos[zone])+' in total)\n(How many detected droughts are ENS?)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 3, 1
+metric = 'RE'
+#axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['A'][metric][1], label='RL (Scenario A)',  color=dt_colors[1], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['A'][metric][0], quantiles_dict['A'][metric][2], color=dt_colors[1], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['A'][metric], linestyle='dashed', color=dt_colors[1], alpha=0.8)
+axs[idx, idy].plot(x, quantiles_dict['B'][metric][1], label='RL (Scenario B)',  color=dt_colors[2], alpha=0.8)
+axs[idx, idy].fill_between(x, quantiles_dict['B'][metric][0], quantiles_dict['B'][metric][2], color=dt_colors[2], alpha=0.5)
+axs[idx, idy].plot(x, min_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].plot(x, max_dict['B'][metric], linestyle='dashed', color=dt_colors[2], alpha=0.8)
+axs[idx, idy].set_ylabel('Recall (out of '+str(nr_of_pos[zone])+' in total)\n(How many ENS are identified as droughts?)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+#plt.close()
+
+print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
+# =================================================================
+# Plot F-score | Only ENS present in at least N FOS scenarios
+# =================================================================
+
+# ---------------------------------------------
+# User defined parameters
+# ---------------------------------------------
+
+PERIOD_length_days = 1
+PERIOD_cluster_days = 1
+
+zone = 'DE00'
+
+scenario_EVA = 'B'
+
+figname = f"Validation_Stoop24_combineFOS_Scenario{scenario_EVA}_{zone}_T{PERIOD_length_days}"
+
+
+# ---------------------------------------------
+# Compute data for figure (~ 15s per variable and percentile)
+# ---------------------------------------------
+start_time = time.time()
+
+## Length of the period to consider for CREDI assessment (in hours)
+# add 1 to get indexes that make sense 
+PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
+
+# Sampling of the period (in hours)
+PERIOD_stride = 24
+
+
+
+# For every percentile threshold
+# TODO: the results F, TP, FN, ... are Series objects, so that pd.concat doesn't work
+# Change the get_f_score method so that the results is a proper dataframe containing all the statistics
+# Then delete the concatting of the STatistics and directly continue with appending the drought types
+
+# TODO: Dirty -> I used an old piece of code, I should update that:
+data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')[[zone]]
+ens_mask = mask_data(data3_ENS_d, 0, False, 2, 0)
+nr_of_pos = (ens_mask==2).sum()
+nr_of_neg = (ens_mask==0).sum()
+
+common_index = data3_RL_h.loc[('HIST')].index.intersection(ens_mask.index)
+
+# Get CREDI events
+rl3_CREDI_event, rl3_event_dates, \
+    rl3_event_values = get_CREDI_events(data3_RL_h.loc[('HIST')][[zone]], zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
+                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
+
+
+data3_ENS_fos = []
+for FOS in range(1, 15+1):
+    data3_ENS_fos.append(pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_daily.pkl')[[zone]])
+df_ENS_sum_fos = sum((data3_ENS_fos[FOS] > 0) * 1 for FOS in range(15))
+
+stat_df = dict()
+for nFOS in range(1, 15+1):
+
+        df_ENS_in_nFOS = (df_ENS_sum_fos >= nFOS) * 1
+        
+        p_list  = []
+        for p in range(len(LWS_percs)):
+            # find capacity thresholds
+            # Percentile is computed on the clustered events ("independent" events)
+            # interpolation="nearest" gives the same result as Benjamin B.'s "empirical=True" in the function "get_thresholds"
+            rl3_thresh = np.quantile(rl3_event_values, q=RL_percs[p], interpolation="nearest")
+
+            # Calculate F (compared to ENS)
+            rl3_stat = get_f_score_CREDI_new(df_ENS_in_nFOS, rl3_event_dates, rl3_event_values, rl3_thresh, common_index, zone, 
+                                            PERIOD_length_days=1, extreme_is_high=True, beta=1)
+
+            # Create Dataframe
+            p_list.append( pd.concat([rl3_stat], 
+                                    keys=['RL'],   names=['Drought type']))
+            print('Done '+str(p+1)+'/'+str(len(LWS_percs)))
+        stat_df[nFOS] = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
+ 
+end_time = time.time()
+print(f"Duration: {timedelta(seconds=end_time - start_time)}")
+
+# Save the Data
+# DataFrame: multiindex = (LWS3, LWS4, RL3, RL4),(F, TP, FN, FP, TN),(threshholds);  columns=countries
+#stat_df.to_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+#stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
+
+
+#%%
+# ---------------------------------------------
+#  Plot F / threshold (comparing to ENS / validation)
+# ---------------------------------------------
+
+# Load data
+#stat_df = pd.read_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+
+
+#nFOS_list = np.arange(1, 15+1)
+nFOS_list = [1, 5, 8, 10, 15]
+
+# Create a color gradient
+colors = plt.cm.viridis(np.linspace(0, 1, 15))
+# Normalize the colors for the colormap
+norm = Normalize(vmin=0, vmax=15)
+scalar_map = ScalarMappable(norm=norm, cmap='plasma')
+
+x=stat_df[1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+# Get values for old dataset
+stat_df_old =  pd.read_pickle(f"{path_to_plot}Plot_data/Validation_Stoop24_ERAA23_ENS_{zone}_T{PERIOD_length_days}_stats.pkl")
+
+
+fig, axs = plt.subplots(4, 2, figsize=(10,16))
+fig.suptitle(f'Stoop Method for {zone} using scenario {scenario_EVA}')
+
+# Event time series
+idx, idy = 0, [0,1]
+ax_big = plt.subplot(4, 1, 1)
+metric = 'F'
+for nFOS in nFOS_list:
+    ax_big.plot(x, stat_df[nFOS].loc[(x, 'RL',  metric),(zone)], color=scalar_map.to_rgba(nFOS-1), label=f'days with ENS>0 in at least {nFOS} FOS')
+ax_big.plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+ax_big.set_ylabel('F-Score')
+ax_big.set_xlabel("Threshold value (average CREDI value [GWh/h])")
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
+axs[0,0].remove()
+axs[0,1].remove()
+
+idx, idy = 1, 0
+metric = 'TP'
+for nFOS in nFOS_list:
+    axs[idx, idy].plot(x, stat_df[nFOS].loc[(x, 'RL',  metric),(zone)], color=scalar_map.to_rgba(nFOS-1))
+axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[zone])+' in total)\n(DF detected, when ENS)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 1, 1
+metric = 'TN'
+for nFOS in nFOS_list:
+    axs[idx, idy].plot(x, stat_df[nFOS].loc[(x, 'RL',  metric),(zone)], color=scalar_map.to_rgba(nFOS-1))
+axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[zone])+' in total)\n(no DF detected, when no ENS)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 2, 0
+metric = 'FP'
+for nFOS in nFOS_list:
+    axs[idx, idy].plot(x, stat_df[nFOS].loc[(x, 'RL',  metric),(zone)], color=scalar_map.to_rgba(nFOS-1))
+axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[zone])+' in total)\n(DF detected, when no ENS)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 2, 1
+metric = 'FN'
+for nFOS in nFOS_list:
+    axs[idx, idy].plot(x, stat_df[nFOS].loc[(x, 'RL',  metric),(zone)], color=scalar_map.to_rgba(nFOS-1))
+axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[zone])+' in total)\n(No DF detected, when ENS)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 3, 0
+metric = 'PR'
+for nFOS in nFOS_list:
+    axs[idx, idy].plot(x, stat_df[nFOS].loc[(x, 'RL',  metric),(zone)], color=scalar_map.to_rgba(nFOS-1))
+axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].set_ylabel('Precision (out of '+str(nr_of_pos[zone])+' in total)\n(How many detected droughts are ENS?)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 3, 1
+metric = 'RE'
+for nFOS in nFOS_list:
+    axs[idx, idy].plot(x, stat_df[nFOS].loc[(x, 'RL',  metric),(zone)], color=scalar_map.to_rgba(nFOS-1))
+axs[idx, idy].plot(x, stat_df_old.loc[(x, 'RL3',  metric),(zone)], label='RL (old dataset)',  color=dt_colors[0], alpha=0.8)
+axs[idx, idy].set_ylabel('Recall (out of '+str(nr_of_pos[zone])+' in total)\n(How many ENS are identified as droughts?)')
+axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+#plt.close()
+
+print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1755,19 +2243,22 @@ from matplotlib.patches import Patch
 # User defined parameters
 # ---------------------------------------------
 
-PERIOD_length_days = 7
-PERIOD_cluster_days = 6
+PERIOD_length_days = 1
+PERIOD_cluster_days = 1
 
 # percentile for peak F-score
 # for DE00 ! Can also change when changing the list of percentiles.
-#p_max = 0.01
+p_max = 0.01
 #p_max = 0.022
 #p_max = 0.0356
-p_max = 0.044
+#p_max = 0.044
 
 zone = 'DE00'
 
 ens_dataset = 'ERAA23'
+
+scenario_EVA = 'B'
+fos = 2
 
 figname = f"Timeline_Stoop24_{ens_dataset}_ENS_{zone}_T{PERIOD_length_days}_Tc{PERIOD_cluster_days}_pmax_{int(p_max*1000)}e-3"
 
@@ -1795,8 +2286,12 @@ if ens_dataset=='AO':
     data3_ENS_d = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')
     X1= np.arange(364)
     X2= np.arange(364*24)
-elif ens_dataset=='ERAA23':
+elif ens_dataset=='ERAA23_old':
     data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
+    X1= np.arange(365)
+    X2= np.arange(365*24)
+elif ens_dataset=='ERAA23':
+    data3_ENS_d = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{fos}_daily.pkl')
     X1= np.arange(365)
     X2= np.arange(365*24)
 else:
@@ -1832,7 +2327,7 @@ ax.legend(handles=legend_elements, facecolor="white", loc='upper center', framea
 
 
 plt.tight_layout()
-plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+#plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
 print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 #plt.close()
         
