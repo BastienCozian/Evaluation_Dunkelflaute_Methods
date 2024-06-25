@@ -1,5 +1,5 @@
 """
-This plot loads in (or compute) the results of energy drought detection by Method 3 (inspired by Stoop et al. 2024).
+This plot loads in (or compute) the results to compare Method 2 and Method 3.
 
 For questions, refer to benjamin.biewald@tennet.eu or bastien.cozian@rte-france.com
 """
@@ -73,12 +73,6 @@ scen_Datespan = [42,51,51,51] # TODO: Automate the nr of years per scenario
 # Load hourly data
 # =================================================================
 
-if ens_dataset=='AO':
-    data3_ENS_h = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_hourly.pkl')
-elif ens_dataset=='ERAA23':
-    data3_ENS_h = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_hourly.pkl')
-else:
-    raise KeyError('ENS Dataset not existent!')
 data3_dem_h = pd.read_pickle(path_to_data+'PEMMDB_demand_TY'+str(ty_pecd3)+'_hourly.pkl')
 data4_dem_h = pd.read_pickle(path_to_data+'ETM_demand_TY'+str(ty_pecd4)+'_hourly.pkl')
 
@@ -108,12 +102,6 @@ data4_RL_h = data4_dem_h - w*data4_gen_h
 # Load daily data
 # =================================================================
 
-if ens_dataset=='AO':
-    data3_ENS_d = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')
-elif ens_dataset=='ERAA23':
-    data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
-else:
-    raise KeyError('ENS Dataset not existent!')
 data3_dem_d = pd.read_pickle(path_to_data+'PEMMDB_demand_TY'+str(ty_pecd3)+'_daily.pkl')
 data4_dem_d = pd.read_pickle(path_to_data+'ETM_demand_TY'+str(ty_pecd4)+'_daily.pkl')
 
@@ -228,8 +216,10 @@ PERIOD_stride = 24
 
 if ens_dataset=='AO':
     data3_ENS_d = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')
-elif ens_dataset=='ERAA23':
+elif ens_dataset=='ERAA23_old':
     data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
+elif ens_dataset=='ERAA23':
+    data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_ScenarioA_FOS1_hourly.pkl')
 else:
     raise KeyError('ENS Dataset not existent!')
 
@@ -469,8 +459,10 @@ PERIOD_stride = 24
 
 if ens_dataset=='AO':
     data3_ENS_d = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')
-elif ens_dataset=='ERAA23':
+elif ens_dataset=='ERAA23_old':
     data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
+elif ens_dataset=='ERAA23':
+    data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_ScenarioA_FOS1_daily.pkl')
 else:
     raise KeyError('ENS Dataset not existent!')
 
@@ -544,8 +536,8 @@ print(f"Duration: {timedelta(seconds=end_time - start_time)}")
 
 # Save the Data
 # DataFrame: multiindex = (LWS3, LWS4, RL3, RL4),(F, TP, FN, FP, TN),(threshholds);  columns=countries
-stat_df.to_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
-stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
+#stat_df.to_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+#stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
 
 
 #%%
@@ -554,7 +546,7 @@ stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
 # ---------------------------------------------
 
 # Load data
-stat_df = pd.read_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+#stat_df = pd.read_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
 
 x=stat_df.index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
 
@@ -653,7 +645,7 @@ axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
 plt.tight_layout()
 #plt.show()
 
-plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+#plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
 #plt.close()
 
 print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
