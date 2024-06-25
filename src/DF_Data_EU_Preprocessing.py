@@ -29,7 +29,8 @@ path_to_pecd4     = 'F:/C3S_PECD_v4.1/'                         #'D:/PECD4_1/'
 path_to_pecd3     = 'F:/PECD3_1/'            #'D:/PECD3_1/'
 path_to_etm_d     = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/PECD4_ETM_demand/'           #'D:/PECD4_1/ETM_Demand/exports/demand/'
 path_to_eraa23_d  = '' # This data ended up not being used                  #'D:/ERAA23/Demand Dataset/' 
-path_to_eraa23_ens= 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/ERAA23_ENS/'                 #'D:/ERAA23/ENS/'
+path_to_eraa23_ens_old = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/ERAA23_ENS/'                 #'D:/ERAA23/ENS/'
+eraa23_ens_csv    = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/ERAA_2023_ENS_hourly_data.csv'
 path_to_ao_ens    = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/Adequacy_Outlook_ENS/'      #'D:/AdequacyOutlook/'
 path_to_pemmdb_c  = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/PEMMDB_Installed_Capacities/' #'D:/PEMMDB/data_TY2033/01_PEMMDB/'
 path_to_pemmdb_d  = 'C:/Users/cozianbas/Documents/Analyses PECD/Scripts/Data_Dunkelflaute_analysis/PEMMDB_TY2033_demand/'    #'D:/PEMMDB/data_TY2033/04_LOAD/TY2033/'
@@ -196,11 +197,48 @@ data3_demand_sum_y.to_pickle(path_to_plot+'Data/PEMMDB_demand_TY2033_annual.pkl'
 
 
 
+#%% Load the (new) ERAA23 ENS data (based on PECD3.X)
+# This dataset is accessible in open access on ENTSO-E's website: https://www.entsoe.eu/outlooks/eraa/2023/eraa-downloads/
+# It was not available when we started this work. We used the "ERAA2023 old ENS data" below.
+
+# For each scenario (A or B) and for each Forced outage scenario (FOS = 1, ..., 15), compute the daily ENS
+
+df_raw = pd.read_csv(eraa23_ens_csv, header=0)
+# Use datatime and change "01/01/2025 00:00" to "2025-01-01 00:00:00"
+df_raw['Date'] = pd.to_datetime(df_raw['Date'], format='%d/%m/%Y %H:%M')
+
+for sce in ['A', 'B']:
+    for fos in range(1, 15+1):
+        # Generate the date range from 1982 to 2016 with hourly frequency
+        date_range = pd.date_range(start='1982-01-01', end='2016-12-31 23:00:00', freq='h')
+        filtered_date_range = date_range[~((date_range.month == 2) & (date_range.day == 29))]
+        df = pd.DataFrame({'Date': filtered_date_range})
+        df.set_index('Date', inplace=True)
+
+        # For target year 2028, we would to shift the date because Feb 29th is present but not dec 31st.
+        # There is no ENS on dec 32st in any target year...
+
+        # create one column for each available SZON zone
+        for szon in df_raw['Bidding Zone'].unique():
+            df[szon] = 0.
+        
+        # We only look at target year (TY) 2033
+        df_sce_fos = df_raw[(df_raw['Scenario'] == f'Scenario {sce}') & (df_raw['FOS'] == fos) & (df_raw['Date'].dt.year == 2033)]
+        for idx, row in df_sce_fos.iterrows():
+            # CY=2016 and Date=2033-01-09 11:00:00 --> Date=2016-01-09 11:00:00 
+            correct_date = row['Date'].replace(year=row['CY'])
+            df.loc[correct_date, row['Bidding Zone']] = row['ENS (MWh)']
+
+        # Uncomment to save hourly data
+        #df.to_pickle(path_to_plot+f'Data/ERAA23_ENS_TY2033_{scenario}_FOS{fos}_hourly.pkl')
+        
+        df_daily = get_daily_values(df,'sum')
+        df_daily.to_pickle(path_to_plot+f'Data/ERAA23_ENS_TY2033_Scenario{sce}_FOS{fos}_daily.pkl')
 
 
 
-
-#%% Load the ERAA23 ENS data (based on PECD3.X)
+#%% Load the OLD ERAA23 ENS data (based on PECD3.X)
+# This dataset is the first we worked with, but is based on a single simulation and is not in open access.
 
 # SZON common to Demand dataset for PECD 3.1 and ENS data (first version transmitted by Laurens)
 SZON_intersection_Demand_ENS = ['SI00', 'ITSA', 'ITSI', 'GR00', 'ITS1', 'UK00', 'LV00', 'BE00', 'MT00', 'SE03', 'CH00', 'IE00', 'ITN1', 'LT00', 'DKE1', 'BA00', 'RO00', 'AL00', 'PL00', 'FR00', 'DE00', 'SK00', 'EE00', 'ITCS', 'ITCA', 'AT00', 'NL00', 'ME00', 'BG00', 'CY00', 'MK00', 'DKW1', 'HU00', 'PT00', 'ES00', 'SE01', 'SE04', 'ITCN', 'UKNI', 'NON1', 'NOS0', 'CZ00', 'NOM1', 'SE02', 'FI00', 'HR00', 'RS00']
@@ -219,7 +257,7 @@ for y in range(len(years_available)):
         yy = y - 1
 
         # Load in csv file of a certain year
-        tmp_csv = pd.read_csv(path_to_eraa23_ens+'TY2033 Post-EVA FB  S2 CY'+str(years_available[yy])+'_ENS_allzones.csv', header=0)
+        tmp_csv = pd.read_csv(path_to_eraa23_ens_old+'TY2033 Post-EVA FB  S2 CY'+str(years_available[yy])+'_ENS_allzones.csv', header=0)
         # Take only the entries of relevant 'evaluation' zones
         cut_rows = tmp_csv[tmp_csv['Child Name'].isin(eval_szon)][['Child Name','Datetime','Value']]
         cut_rows['Value'] = 0
@@ -227,7 +265,7 @@ for y in range(len(years_available)):
     else:
 
         # Load in csv file of a certain year
-        tmp_csv = pd.read_csv(path_to_eraa23_ens+'TY2033 Post-EVA FB  S2 CY'+str(years_available[y])+'_ENS_allzones.csv', header=0)
+        tmp_csv = pd.read_csv(path_to_eraa23_ens_old+'TY2033 Post-EVA FB  S2 CY'+str(years_available[y])+'_ENS_allzones.csv', header=0)
         # Take only the entries of relevant 'evaluation' zones
         cut_rows = tmp_csv[tmp_csv['Child Name'].isin(eval_szon)][['Child Name','Datetime','Value']]
         
@@ -250,9 +288,9 @@ data3_eraa23_ens_h.index.rename('Date', inplace=True)
 data3_eraa23_ens_sum_y = data3_eraa23_ens_h.groupby([data3_eraa23_ens_h.index.get_level_values('Date').year]).sum()
 data3_eraa23_ens_sum_d = get_daily_values(data3_eraa23_ens_h,'sum')
 
-data3_eraa23_ens_h.to_pickle(path_to_plot+'Data/ERAA23_ENS_TY2033_hourly.pkl')
-data3_eraa23_ens_sum_y.to_pickle(path_to_plot+'Data/ERAA23_ENS_TY2033_annual.pkl')
-data3_eraa23_ens_sum_d.to_pickle(path_to_plot+'Data/ERAA23_ENS_TY2033_daily.pkl')
+data3_eraa23_ens_h.to_pickle(path_to_plot+'Data/ERAA23_old_ENS_TY2033_hourly.pkl')
+data3_eraa23_ens_sum_y.to_pickle(path_to_plot+'Data/ERAA23_old_ENS_TY2033_annual.pkl')
+data3_eraa23_ens_sum_d.to_pickle(path_to_plot+'Data/ERAA23_old_ENS_TY2033_daily.pkl')
 
 print('Preprocessed ERAA23 ENS data')
 
@@ -403,7 +441,7 @@ zone_to_remove = ['ITCA', 'ITCA_OFF', 'FR15', 'DKBI_OFF', 'DKKF_OFF']
 ty_pecd3 = 2033
 
 if not ty_pecd3==2033:
-    raise KeyError('Targetyear (ty) must be 2033 and not '+str(ty))
+    raise KeyError('Target year (ty) must be 2033 and not '+str(ty))
 
 data3_ENS_d = pd.read_pickle(path_to_plot+'Data/PEMMDB_capacities_TY'+str(ty_pecd3)+'.pkl')
 
