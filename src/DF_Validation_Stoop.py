@@ -1745,7 +1745,7 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 PERIOD_length_days = 1
 PERIOD_cluster_days = 1
 
-zone = 'SE04'
+zone = 'AT00'
 
 ens_dataset = 'ERAA23'
 
