@@ -544,7 +544,7 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
     We consider that a CREDI event has successfully detected an ENS (true positive) if at least one ENS occur during 
     the `PERIOD_length_days`-day-long CREDI event.
 
-    The dates of the Dunkelflaute eventq computed with the CREDI method are shifted by one day. 
+    The dates of the Dunkelflaute event computed with the CREDI method are shifted by one day. 
     Indeed, a 3-day CREDI event indexed at day 1982-01-04 is actually the average from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
 
 
