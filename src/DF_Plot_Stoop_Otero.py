@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.pylab as pylab
 import matplotlib.transforms as mtransforms
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
 from datetime import timedelta
 import datetime as dtime
 import time
@@ -390,7 +392,7 @@ else:
 ls  = 'solid'
 ax.scatter(x, y, color=dt_colors[0], label=f'RL only TP (r={np.round(r_value, 2)})', alpha=1)
 ax.plot(df_reg, c=dt_colors[0], linestyle=ls)
-print(f' RL  (3.1) intercept={intercept}, slope={slope}, r_value={r_value}, p_value={p_value}, reg_trend={reg_trend}')
+print(f'RL (3.1) intercept={intercept}, slope={slope}, r_value={r_value}, p_value={p_value}, reg_trend={reg_trend}')
 
 ax.set_title(f'RL (PECD 3.1, {ens_dataset}, {zone}, T={PERIOD_length_days}, Tc={PERIOD_cluster_days}, p={p_max})')
 ax.set_ylabel('Summed up ENS [GWh]')
@@ -405,6 +407,178 @@ plt.savefig(f"{path_to_plot}Correlation/{figname}.{plot_format}", dpi=300)
 
 print(f"Saved {path_to_plot}Correlation/{figname}.{plot_format}")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%% 
+# =================================================================
+# Correlation (ENS vs. Severity) | New ENS + possible aggregated scale
+# =================================================================
+
+# ---------------------------------------------
+# User defined parameters
+# ---------------------------------------------
+
+# Duration of CREDI events
+PERIOD_length_days = 1
+# Clustering period. If PERIOD_length_days < PERIOD_cluster_days, then there may be overlaps. We authorize up to 25% overlap.
+PERIOD_cluster_days = 1
+
+scenario_EVA = 'B'
+
+# Non-aggregated zones
+#aggregated_zone = False
+#zone = 'FR00'
+
+# Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
+#agg_zone = zone; zones_list = [zone]
+
+# Agregated zones
+#aggregated_zone = True
+agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
+#agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
+
+# --- Percentile for peak F-score. Computed in `DF_Validation_Stoop.py`
+# FOR DE00
+#p_max = 0.01   # TODO: check with new data
+#p_max = 0.022  # TODO: check with new data
+#p_max = 0.0356 # TODO: check with new data
+#p_max = 0.044  # TODO: check with new data
+
+# FOR FR00
+#p_max = 0.0044
+#p_max = 0.026  # TODO: check with new data
+#p_max = 0.0276 # TODO: check with new data
+#p_max = 0.0204 # TODO: check with new data
+
+# FOR CWE
+p_max = 0.014
+
+
+figname = f"Correlation_ENSvsCREDI_ENS_Scenario{scenario_EVA}_{agg_zone}_T{PERIOD_length_days}_Tc{PERIOD_cluster_days}_pmax_{int(p_max*1000)}e-3"
+
+# ---------------------------------------------
+# Compute data for figure (~ 15s per variable and percentile)
+# ---------------------------------------------
+
+## Length of the period to consider for CREDI assessment (in hours)
+# add 1 to get indexes that make sense 
+PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
+
+# Sampling of the period (in hours)
+PERIOD_stride = 24
+
+# --- Aggregation at the agg_zone level ---
+# We create new dataframe that are organized in te same way as original dataframe, 
+# but the column are not SZON but the name of the aggregation region.
+# This is convenient to reuse the same code structure
+df_agg_gen_h = pd.DataFrame()
+df_agg_dem_h = pd.DataFrame()
+df_agg_RL_h  = pd.DataFrame()
+df_agg_old_ENS_d = pd.DataFrame()
+
+df_agg_gen_h[agg_zone] = data3_gen_h.loc[('HIST')][zones_list].sum(axis=1)
+df_agg_dem_h[agg_zone] = data3_dem_h.loc[('HIST')][zones_list].sum(axis=1)
+df_agg_RL_h[agg_zone]  = data3_RL_h.loc[('HIST')][zones_list].sum(axis=1)
+df_agg_old_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')[zones_list].sum(axis=1)
+
+
+
+# Generate masked data
+# TODO: Dirty -> I used an old piece of code, I should update that:
+ens_mask = mask_data(df_agg_old_ENS_d, 0, False, 2, 0)
+common_index = df_agg_RL_h.index.intersection(ens_mask.index)
+
+# Get CREDI events
+rl3_CREDI_event, rl3_event_dates, \
+    rl3_event_values = get_CREDI_events(df_agg_RL_h, agg_zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
+                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
+
+rl3_thresh = np.quantile(rl3_event_values, q=1-p_max, interpolation="nearest")
+
+rl3_DF_all = dict()
+rl3_sum_ENS_all = dict()
+
+for FOS in range(1, 15+1):
+
+    df_agg_ENS_fos_d = pd.DataFrame()
+    df_agg_ENS_fos_d[agg_zone] = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_daily.pkl')[zones_list].sum(axis=1)
+    
+    """
+    # Only true positives
+    rl3_DF_TP, rl3_sum_ENS_TP = get_correlation_CREDI(df_agg_ENS_fos_d, rl3_event_dates, rl3_event_values, rl3_thresh, common_index, 
+                                                    agg_zone, PERIOD_length_days=1, extreme_is_high=True, only_true_positive=True)
+    """
+
+    # With TP, FP, FN
+    rl3_DF_all[FOS], rl3_sum_ENS_all[FOS] = get_correlation_CREDI(df_agg_ENS_fos_d, rl3_event_dates, rl3_event_values, rl3_thresh, common_index, 
+                                                                  agg_zone, PERIOD_length_days=1, extreme_is_high=True, only_true_positive=False)
+
+
+# ---------------------------------------------
+#  Plot Correlation
+# ---------------------------------------------
+
+
+# Create a color gradient
+colors = plt.cm.viridis(np.linspace(0, 1, 15))
+# Normalize the colors for the colormap
+norm = Normalize(vmin=0, vmax=15)
+scalar_map = ScalarMappable(norm=norm, cmap='plasma')
+
+
+fig, ax = plt.subplots(1, 1, figsize=(5,5))
+
+r_value = dict()
+for FOS in range(1, 15+1):
+    x = rl3_DF_all[FOS]
+    y = rl3_sum_ENS_all[FOS]
+    # Linear regression
+    df_reg, intercept, slope, r_value[FOS], p_value, reg_trend = lin_reg(x, y)
+    """
+    if p_value < 0.05:
+        ls  = 'solid'
+    else:
+        ls = 'dotted'
+    """
+    ls  = 'solid'
+    ax.scatter(x, y, color=scalar_map.to_rgba(FOS-1), alpha=0.5)
+    ax.plot(df_reg, c=scalar_map.to_rgba(FOS-1), linestyle=ls)
+    print(f'RL (3.1), FOS {FOS}: intercept={intercept}, slope={slope}, r_value={r_value[FOS]}, p_value={p_value}, reg_trend={reg_trend}')
+
+r_q50 = np.quantile([r_value[FOS] for FOS in range(1, 15+1)], 0.5)
+r_min = np.min([r_value[FOS] for FOS in range(1, 15+1)])
+r_max = np.max([r_value[FOS] for FOS in range(1, 15+1)])
+
+ax.set_title(f'RL (PECD 3.1), Scenario {scenario_EVA}, {agg_zone}, T={PERIOD_length_days}, Tc={PERIOD_cluster_days}, p={p_max})\n r={np.round(r_q50, 2)} [{np.round(r_min, 2)}, {np.round(r_max, 2)}] (Q50 [min, max])')
+ax.set_ylabel('Summed up ENS [GWh]')
+ax.set_xlabel('CREDI [GWh]')
+ax.legend(facecolor="white", loc='upper left', framealpha=1)
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Correlation/{figname}.{plot_format}", dpi=300)
+#plt.close()
+
+print(f"Saved {path_to_plot}Correlation/{figname}.{plot_format}")
 
 
 
@@ -462,6 +636,7 @@ if ens_dataset=='AO':
 elif ens_dataset=='ERAA23_old':
     data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_daily.pkl')
 elif ens_dataset=='ERAA23':
+    print('Warning: new ENS data not properly implemented in this piece of code.')
     data3_ENS_d = pd.read_pickle(path_to_data+'ERAA23_ENS_TY2033_ScenarioA_FOS1_daily.pkl')
 else:
     raise KeyError('ENS Dataset not existent!')
