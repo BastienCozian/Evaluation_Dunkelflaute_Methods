@@ -410,9 +410,14 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 PERIOD_length_days = 1
 PERIOD_cluster_days = 1
 
+# Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
+zone = 'ES00'
+agg_zone = zone; zones_list = [zone]
+
 #agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
-agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
+#agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
 #agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
+#agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
 
 ens_dataset = 'ERAA23'
 
@@ -513,8 +518,7 @@ print(f"Duration: {timedelta(seconds=end_time - start_time)}")
 
 # Save the Data
 # DataFrame: multiindex = (LWS3, LWS4, RL3, RL4),(F, TP, FN, FP, TN),(threshholds);  columns=countries
-#stat_df.to_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
-#stat_df.to_csv(f"{path_to_plot}Plot_data/{figname}_stats.csv", sep=';')
+pickle.dump(stat_df, open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "wb"))
 
 
 #%%
@@ -523,7 +527,7 @@ print(f"Duration: {timedelta(seconds=end_time - start_time)}")
 # ---------------------------------------------
 
 # Load data
-#stat_df = pd.read_pickle(f"{path_to_plot}Plot_data/{figname}_stats.pkl")
+stat_df = pickle.load(open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "rb"))
 
 x=stat_df['A'][1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
 
@@ -706,12 +710,13 @@ PERIOD_length_days = 1
 PERIOD_cluster_days = 1
 
 # Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
-#zone = 'FR00'
-#agg_zone = zone; zones_list = [zone]
+zone = 'PL00'
+agg_zone = zone; zones_list = [zone]
 
-agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
 #agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
 #agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
+#agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
 
 scenario_EVA = 'B'
 
@@ -750,7 +755,6 @@ df_agg_gen_h[agg_zone] = data3_gen_h.loc[('HIST')][zones_list].sum(axis=1)
 df_agg_dem_h[agg_zone] = data3_dem_h.loc[('HIST')][zones_list].sum(axis=1)
 df_agg_RL_h[agg_zone]  = data3_RL_h.loc[('HIST')][zones_list].sum(axis=1)
 df_agg_old_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')[zones_list].sum(axis=1)
-
 # --- end of aggregation ----
 
 # TODO: Dirty -> I used an old piece of code, I should update that:
@@ -838,9 +842,6 @@ metric = 'F'
 F_max = quantiles_dict[ener_var][metric][1].max()
 p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
 print(f"RL3 (T=1): F_max = {F_max}, p_max = {p_max}")
-
-fig, axs = plt.subplots(4, 2, figsize=(10,16))
-fig.suptitle(f'Stoop Method for {zone} using scenario {scenario_EVA} (T={PERIOD_length_days}d)')
 
 fig, axs = plt.subplots(4, 2, figsize=(10,16))
 fig.suptitle(f'Stoop Method for {agg_zone} using new ENS dataset (T={PERIOD_length_days}d)')
@@ -946,4 +947,192 @@ plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
 #plt.close()
 
 print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
-# %%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%% 
+# =================================================================
+# Plot Timeline
+# =================================================================
+# Plot Timelines of DF Detection and ENS
+# only HIST (obviously)
+# whithout February 29th
+# Grid plot: X=DoY, Y=Year, Colors: White=TN, Blue=FP, Red=FN, Green=TP
+# For each droughttype individual panels
+
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import Patch
+
+# ---------------------------------------------
+# User defined parameters
+# ---------------------------------------------
+
+PERIOD_length_days = 1
+PERIOD_cluster_days = 1
+
+#ens_dataset = 'ERAA23_old'; scenario_EVA = 'none' ; FOS = 0
+ens_dataset = 'ERAA23'; scenario_EVA = 'B' ; FOS = 2
+
+# Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
+zone = 'PL00'
+agg_zone = zone; zones_list = [zone]
+
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
+#agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
+#agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
+
+
+# --- Percentile for peak F-score. Computed in `DF_Validation_Stoop.py`
+# FOR DE00
+#p_max = 0.01   # TODO: check with new data
+#p_max = 0.022  # TODO: check with new data
+#p_max = 0.0356 # TODO: check with new data
+#p_max = 0.044  # TODO: check with new data
+
+# FOR FR00
+#p_max = 0.0044
+#p_max = 0.026  # TODO: check with new data
+#p_max = 0.0276 # TODO: check with new data
+#p_max = 0.0204 # TODO: check with new data
+
+# FOR CWE
+#p_max = 0.014 # T=1
+
+# FOR NO
+#p_max = 0.0036 # T=1
+
+# FOR IT
+#p_max = 0.0284 # T=1
+
+# For PL00
+p_max = 0.0084 # T=1
+
+
+
+
+figname = f"Timeline_Stoop24_{ens_dataset}_Scenario{scenario_EVA}_FOS{FOS}_{agg_zone}_T{PERIOD_length_days}_Tc{PERIOD_cluster_days}_pmax_{int(p_max*1000)}e-3"
+
+# ---------------------------------------------
+# Compute data for figure (~ 15s per variable and percentile)
+# ---------------------------------------------
+start_time = time.time()
+
+## Length of the period to consider for CREDI assessment (in hours)
+# add 1 to get indexes that make sense 
+PERIOD_length = PERIOD_length_days * 24 + 1 #193 # 8 days
+
+# Sampling of the period (in hours)
+PERIOD_stride = 24
+
+# --- Aggregation at the agg_zone level ---
+# We create new dataframe that are organized in te same way as original dataframe, 
+# but the column are not SZON but the name of the aggregation region.
+# This is convenient to reuse the same code structure
+df_agg_RL_h  = pd.DataFrame()
+df_agg_old_ENS_d = pd.DataFrame()
+
+df_agg_RL_h[agg_zone]  = data3_RL_h.loc[('HIST')][zones_list].sum(axis=1)
+df_agg_old_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')[zones_list].sum(axis=1)
+# --- end of aggregation ----
+
+
+# Create colormap
+colors = ['whitesmoke', 'royalblue', 'red', 'limegreen']
+cmap=ListedColormap(colors)
+legend_elements = [Patch(facecolor=colors[0], edgecolor=colors[0],label='No DF, No ENS'),
+                   Patch(facecolor=colors[1], edgecolor=colors[1],label='DF detected, but no ENS'),
+                   Patch(facecolor=colors[2], edgecolor=colors[2],label='No DF, but ENS'),
+                   Patch(facecolor=colors[3], edgecolor=colors[3],label='DF detected and ENS')]
+
+df_agg_ENS_d = pd.DataFrame()
+if ens_dataset=='AO':
+    df_agg_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'AO_'+ao_scen+'_ENS_daily.pkl')[zones_list].sum(axis=1)
+    X1= np.arange(364)
+    X2= np.arange(364*24)
+elif ens_dataset=='ERAA23_old':
+    df_agg_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')[zones_list].sum(axis=1)
+    X1= np.arange(365)
+    X2= np.arange(365*24)
+elif ens_dataset=='ERAA23':
+    df_agg_ENS_d[agg_zone] = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_daily.pkl')[zones_list].sum(axis=1)
+    X1= np.arange(365)
+    X2= np.arange(365*24)
+else:
+    raise KeyError('ENS Dataset not existent!')
+Y = np.arange(1982,2016+1) # common period of ENS & PECD
+
+# Generate masked data
+# TODO: Dirty -> I used an old piece of code, I should update that:
+ens_mask = mask_data(df_agg_old_ENS_d, 0, False, 2, 0)
+
+# Get CREDI events
+rl3_CREDI_event, rl3_event_dates, \
+    rl3_event_values = get_CREDI_events(df_agg_RL_h, agg_zone, extreme_is_high=True, PERIOD_length_days=PERIOD_length_days,
+                                        PERIOD_cluster_days=PERIOD_cluster_days, start_date='1982-01-01', end_date='2016-12-31')
+
+rl3_thresh = np.quantile(rl3_event_values, q=1-p_max, interpolation="nearest")
+
+df_mask_timeline = compute_timeline(df_agg_ENS_d, rl3_event_dates, rl3_event_values, rl3_thresh, agg_zone, PERIOD_length_days, 
+                                    extreme_is_high=True, start_date='1982-01-01', end_date='2016-12-31')
+
+
+# Tranform detection masks into the right format
+def detmask2matrix(detmask,X,Y):
+    return np.reshape(detmask, (len(Y),len(X)))
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+
+#axs.pcolormesh(X1, Y, detmask2matrix(rl3_detmask[zones_szon[c]],X1,Y), cmap=cmap)
+ax.pcolormesh(X1, Y, detmask2matrix(df_mask_timeline[agg_zone],X1,Y), cmap=cmap)
+ax.set_title(f'RL (PECD 3.1, {ens_dataset}, Scenario EVA {scenario_EVA}, FOS {FOS}, {agg_zone}, T={PERIOD_length_days}, Tc={PERIOD_cluster_days}, p={p_max})')
+ax.set_ylabel('Year')
+ax.set_xlabel('Day of Year')
+ax.legend(handles=legend_elements, facecolor="white", loc='upper center', framealpha=1)
+
+
+plt.tight_layout()
+#plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
+#plt.close()
+        
+# TODO: Some masks are shorter? Why? In year with leap day the 31.12. is missing (and the leap day...)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
