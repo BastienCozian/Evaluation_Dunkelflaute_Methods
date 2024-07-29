@@ -150,7 +150,7 @@ def Climatology_Hourly_Rolling(InputDataSet, RollingWindow=40):
     return OutputDataSet, modified_ordinal_hour
 
 
-def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9):
+def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9, calendar2018=True):
     """
     Compute the climatology with an Hourly Weekly Rolling Window (HWRW).
     It is an adaptation of the Hourly Rolling Window (HRW) [1]. 
@@ -185,6 +185,13 @@ def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9):
         Size of the rolling window (in WEEKS)
         If RollingWindow == 3, returns the mean of w-1, w, and w+1.
         If RollingWindow == 4, returns the mean of w-1, w-2, w, w+1.
+    
+    calendar2018 : bool
+        If True, use the calendar of 2018 to compute the day of the week (0=Monday, 6=Sunday)
+        Else, use the calendar of the InputDataSet.
+        The demand model uses the calendar of 2018 (which start on a Monday Jan 1st) for modeling reasons. 
+        Not using the calendar of 2018 with the HWRW method would average, e.g. the demand profile on a Monday in december for year N-1 
+        with the demand profile on a Sunday in Januray for year N.
 
     Returns
     -------
@@ -210,10 +217,16 @@ def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9):
 
     results = []
     df_hours = InputDataSet.Date.dt.hour.to_pandas()
-    df_dayofweek = InputDataSet.Date.dt.dayofweek.to_pandas()
+    if calendar2018:
+        # Compute dayofweek based on the calendar of 2018. Relevant for demand time series.
+        year_min, year_max = InputDataSet.Date.dt.year.min(), InputDataSet.Date.dt.year.max()
+        N_year = year_max - year_min + 1 
+        dayofweek = np.concatenate([pd.date_range('2018-01-01', periods=8760, freq='1h').dayofweek for y in range(N_year.values)])
+    else:
+        dayofweek = InputDataSet.Date.dt.dayofweek.to_pandas()
     # Average for values with the same hour and dayofweek
     # Need to use Pandas' .groupby() because Xarray's .groupby() does not allow to easily use two groups.
-    for _, group in InputDataSet.to_pandas().groupby([df_hours, df_dayofweek]):
+    for _, group in InputDataSet.to_pandas().groupby([df_hours, dayofweek]):
         results.append(group.to_xarray().rolling(Date=RollingWindow, center=True).mean())
 
     OutputDataSet = xr.merge(results)
@@ -225,6 +238,7 @@ def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9):
     return OutputDataSet, modified_ordinal_hour
 
 
+
 # =============================================================================
 # CREDI
 # =============================================================================
@@ -232,7 +246,7 @@ def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9):
 
 
 def get_CREDI_events(df_data, zone, extreme_is_high=True, PERIOD_length_days=1, PERIOD_cluster_days=1,
-                     start_date='1982-01-01', end_date='2016-12-31', climatology='HRW'):
+                     start_date='1982-01-01', end_date='2016-12-31', climatology='HWRW'):
     """
     Compute the Climatological Renewable Energy Deviation Index (CREDI) [1]. 
     CREDI is by default computed based on Hourly Rolling Window (HRW, see function `Climatology_Hourly_Rolling`)
@@ -329,7 +343,6 @@ def get_CREDI_events(df_data, zone, extreme_is_high=True, PERIOD_length_days=1, 
     elif climatology == 'HWRW':
         ds_clim_HWRW, MOH = Climatology_Hourly_Weekly_Rolling(ds_data, RollingWindow=9)
         ds_anom = ds_data.groupby(MOH) - ds_clim_HWRW
-        print("The HWRW method is not properly implemented yet.")
     elif climatology == 'empirical':
         ds_anom = ds_data - Climatology_Hourly(ds_data)
     else:

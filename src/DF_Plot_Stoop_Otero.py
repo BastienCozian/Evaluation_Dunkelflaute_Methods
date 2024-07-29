@@ -140,8 +140,9 @@ data4_RL_d = data4_dem_d - w*data4_gen_d
 
 
 
-"""
+
 #%% 
+"""
 # =================================================================
 # Compute thresholds for Otero
 # =================================================================
@@ -1117,11 +1118,11 @@ PERIOD_cluster_days = 1
 
 # Non-aggregated zones
 # Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
-zone = 'DE00'
-agg_zone = zone; zones_list = [zone]
+#zone = 'DE00'
+#agg_zone = zone; zones_list = [zone]
 
 # Aggregated zones
-#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
 #agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
 #agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
 #agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
