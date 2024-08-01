@@ -289,7 +289,7 @@ print(f"Saved {path_to_plot}PDF/{figname}.{plot_format}")
 
 #%% 
 # =================================================================
-# Plot Correlation between ENS and Severity
+# (Old ENS dataset) Correlation between ENS and CREDI
 # =================================================================
 
 # ---------------------------------------------
@@ -771,6 +771,9 @@ for FOS in range(1, 15+1):
 
         x = df_events.loc[('HIST', agg_zone),('Severity (adapted)')]
         y = get_ENS_sums(df_agg_ENS_fos_d, df_events.loc[('HIST')], agg_zone)
+        # Only Energy drought with Sevverity >= 0
+        y = y[x >= 0]
+        x = x[x >= 0]
         # Linear regression
         df_reg, intercept, slope, r_value[FOS][ener_var], p_value, reg_trend = lin_reg(x, y)
         axs[idx].scatter(x, y, color=color, label=label, alpha=0.5)
@@ -1122,7 +1125,9 @@ PERIOD_cluster_days = 1
 #agg_zone = zone; zones_list = [zone]
 
 # Aggregated zones
-agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CoreRegion'; zones_list = ['BE00', 'FR00', 'NL00', 'DE00', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CSA'; zones_list = ['PT00', 'ES00', 'BE00', 'FR00', 'NL00', 'DE00', 'DKW1', 'CH00', 'ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00', 'BA00', 'RS00', 'ME00', 'MK00', 'GR00', 'BG00'] # (Part of) Continental Synchronous Area (based on available data). 'DKE1' is part of the Nordic Zone. No data for ['FR15', 'MD00', 'UA01', 'UA02', 'CR00', 'TR00'].
 #agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
 #agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
 #agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
@@ -1165,14 +1170,8 @@ df_agg_RL_d  = pd.DataFrame()
 df_agg_RL_d[agg_zone]  = data3_RL_d.loc[('HIST')][zones_list].sum(axis=1)
 # --- end of aggregation ----
 
-# TODO: Dirty -> I used an old piece of code, I should update that:
-df_agg_old_ENS_d = pd.DataFrame()
-df_agg_old_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')[zones_list].sum(axis=1)
-ens_mask = mask_data(df_agg_old_ENS_d, 0, False, 2, 0)
-nr_of_pos = (ens_mask==2).sum()
-nr_of_neg = (ens_mask==0).sum()
-
-common_index = df_agg_RL_h.index.intersection(ens_mask.index)
+df_ENS_example = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{'B'}_FOS{1}_daily.pkl')[zones_list[0]]
+common_index = df_agg_RL_h.index.intersection(df_ENS_example.index)
 
 # Get CREDI events
 rl3_CREDI_event, rl3_event_dates, \
@@ -1181,7 +1180,6 @@ rl3_CREDI_event, rl3_event_dates, \
 
 stat_df = dict()
 for FOS in range(1, 15+1):
-
 
     df_agg_ENS_fos_d = pd.DataFrame()
     df_agg_ENS_fos_d[agg_zone] = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_daily.pkl')[zones_list].sum(axis=1)
@@ -1212,9 +1210,10 @@ for FOS in range(1, 15+1):
         # Create Dataframe
         p_list.append( pd.concat([rl3_stat, Otero_rl3_stat], keys=['RL (Stoop)', 'RL (Otero)'],   names=['Drought type']))
         print('Done '+str(p+1)+'/'+str(len(LWS_percs)))
-    stat_df[FOS] = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
 
- 
+    stat_df[FOS] = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
+    print(f'    Done FOS {FOS}')
+
 end_time = time.time()
 print(f"Duration: {timedelta(seconds=end_time - start_time)}")
 
@@ -1285,7 +1284,7 @@ for ncolor, ener_var in enumerate(['RL (Stoop)', 'RL (Otero)']):
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[agg_zone])+' in total)\n(DF detected, when ENS)')
+axs[idx, idy].set_ylabel('True Positives (DF detected, when ENS)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1298,7 +1297,7 @@ for ncolor, ener_var in enumerate(['RL (Stoop)', 'RL (Otero)']):
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[agg_zone])+' in total)\n(no DF detected, when no ENS)')
+axs[idx, idy].set_ylabel('True Negatives (no DF detected, when no ENS)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1311,7 +1310,7 @@ for ncolor, ener_var in enumerate(['RL (Stoop)', 'RL (Otero)']):
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[agg_zone])+' in total)\n(DF detected, when no ENS)')
+axs[idx, idy].set_ylabel('False Positives (DF detected, when no ENS)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1324,7 +1323,7 @@ for ncolor, ener_var in enumerate(['RL (Stoop)', 'RL (Otero)']):
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[agg_zone])+' in total)\n(No DF detected, when ENS)')
+axs[idx, idy].set_ylabel('False Negatives (No DF detected, when ENS)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1401,11 +1400,13 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 
 # Non-aggregated zones
 # Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
-#zone = 'DE00'
-#agg_zone = zone; zones_list = [zone]
+zone = 'DE00'
+agg_zone = zone; zones_list = [zone]
 
 # Aggregated zones
-agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CoreRegion'; zones_list = ['BE00', 'FR00', 'NL00', 'DE00', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00'] # Luxembourg is not in demand dataset
 #agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
 #agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
 #agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
@@ -1448,14 +1449,9 @@ df_agg_RL_d  = pd.DataFrame()
 df_agg_RL_d[agg_zone]  = data3_RL_d.loc[('HIST')][zones_list].sum(axis=1)
 # --- end of aggregation ----
 
-# TODO: Dirty -> I used an old piece of code, I should update that:
-df_agg_old_ENS_d = pd.DataFrame()
-df_agg_old_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_daily.pkl')[zones_list].sum(axis=1)
-ens_mask = mask_data(df_agg_old_ENS_d, 0, False, 2, 0)
-nr_of_pos = (ens_mask==2).sum()
-nr_of_neg = (ens_mask==0).sum()
+df_ENS_example = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{'B'}_FOS{1}_daily.pkl')[zones_list[0]]
+common_index = df_agg_RL_d.index.intersection(df_ENS_example.index)
 
-common_index = df_agg_RL_h.index.intersection(ens_mask.index)
 
 # Get CREDI events
 PERIOD_length_days = 1
@@ -1523,8 +1519,9 @@ for FOS in range(1, 15+1):
         # Create Dataframe
         p_list.append( pd.concat([T1_stat, T3_stat, T5_stat, T7_stat], keys=['RL (T=1)', 'RL (T=3)', 'RL (T=5)', 'RL (T=7)'],   names=['Drought type']))
         print('Done '+str(p+1)+'/'+str(len(LWS_percs)))
-    stat_df[FOS] = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
 
+    stat_df[FOS] = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
+    print(f' Done FOS {FOS}')
  
 end_time = time.time()
 print(f"Duration: {timedelta(seconds=end_time - start_time)}")
@@ -1534,7 +1531,7 @@ print(f"Duration: {timedelta(seconds=end_time - start_time)}")
 pickle.dump(stat_df, open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "wb"))
 
 
-#%%
+##%%
 # ---------------------------------------------
 #  Plot F / threshold (comparing to ENS / validation)
 # ---------------------------------------------
@@ -1589,7 +1586,7 @@ for ncolor, ener_var in enumerate(['RL (T=1)', 'RL (T=3)', 'RL (T=5)', 'RL (T=7)
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('True Positives (out of '+str(nr_of_pos[agg_zone])+' in total)\n(DF detected, when ENS)')
+axs[idx, idy].set_ylabel('True Positives (DF detected, when ENS)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1602,7 +1599,7 @@ for ncolor, ener_var in enumerate(['RL (T=1)', 'RL (T=3)', 'RL (T=5)', 'RL (T=7)
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('True Negatives (out of '+str(nr_of_neg[agg_zone])+' in total)\n(no DF detected, when no ENS)')
+axs[idx, idy].set_ylabel('True Negatives (no DF detected, when no ENS)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1615,7 +1612,7 @@ for ncolor, ener_var in enumerate(['RL (T=1)', 'RL (T=3)', 'RL (T=5)', 'RL (T=7)
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('False Positives (out of '+str(nr_of_neg[agg_zone])+' in total)\n(DF detected, when no ENS)')
+axs[idx, idy].set_ylabel('False Positives (DF detected, when no ENS)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1628,7 +1625,7 @@ for ncolor, ener_var in enumerate(['RL (T=1)', 'RL (T=3)', 'RL (T=5)', 'RL (T=7)
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('False Negatives (out of '+str(nr_of_pos[agg_zone])+' in total)\n(No DF detected, when ENS)')
+axs[idx, idy].set_ylabel('False Negatives (No DF detected, when ENS)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1641,7 +1638,7 @@ for ncolor, ener_var in enumerate(['RL (T=1)', 'RL (T=3)', 'RL (T=5)', 'RL (T=7)
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('Precision (out of '+str(nr_of_pos[agg_zone])+' in total)\n(How many detected droughts are ENS?)')
+axs[idx, idy].set_ylabel('Precision (How many detected droughts are ENS?)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1654,7 +1651,7 @@ for ncolor, ener_var in enumerate(['RL (T=1)', 'RL (T=3)', 'RL (T=5)', 'RL (T=7)
     axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
-axs[idx, idy].set_ylabel('Recall (out of '+str(nr_of_pos[agg_zone])+' in total)\n(How many ENS are identified as droughts?)')
+axs[idx, idy].set_ylabel('Recall (How many ENS are identified as droughts?)')
 axs[idx, idy].set_xlabel("Percentile of top CREDI events labelled 'Dunkelflaute'")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=False))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
@@ -1667,3 +1664,4 @@ plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
 #plt.close()
 
 print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
+# %%
