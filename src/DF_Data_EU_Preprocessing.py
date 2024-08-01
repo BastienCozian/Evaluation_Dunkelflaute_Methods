@@ -18,6 +18,7 @@ import os
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import datetime as dtime
 from Dunkelflaute_function_library import get_zones
 from Dunkelflaute_function_library import get_daily_values
 from Dunkelflaute_function_library import get_daily_values_pecd
@@ -216,7 +217,7 @@ for sce in ['A', 'B']:
         df.set_index('Date', inplace=True)
 
         # For target year 2028, we would to shift the date because Feb 29th is present but not dec 31st.
-        # There is no ENS on dec 32st in any target year...
+        # There is no ENS on dec 31st in any target year...
 
         # create one column for each available SZON zone
         for szon in df_raw['Bidding Zone'].unique():
@@ -226,14 +227,19 @@ for sce in ['A', 'B']:
         df_sce_fos = df_raw[(df_raw['Scenario'] == f'Scenario {sce}') & (df_raw['FOS'] == fos) & (df_raw['Date'].dt.year == 2033)]
         for idx, row in df_sce_fos.iterrows():
             # CY=2016 and Date=2033-01-09 11:00:00 --> Date=2016-01-09 11:00:00 
-            correct_date = row['Date'].replace(year=row['CY'])
+            change_year = row['Date'].replace(year=row['CY'])
+            # ENS use the calendar of 2028. Consequence: ENS can occur on 02-29, but not on 12-31 --> shift the date
+            is_leap_year = change_year.is_leap_year
+            feb29_or_later = ((change_year.month == 2) & (change_year.day == 29)) | (change_year.month >= 3)
+            correct_date = change_year + dtime.timedelta(is_leap_year & feb29_or_later)
             df.loc[correct_date, row['Bidding Zone']] = row['ENS (MWh)']
 
-        # Uncomment to save hourly data
-        #df.to_pickle(path_to_plot+f'Data/ERAA23_ENS_TY2033_{scenario}_FOS{fos}_hourly.pkl')
+        # Uncomment to save hourly data (not needed for now)
+        #df.to_pickle(path_to_plot+f'Data/ERAA23_ENS_TY2033_Scenario{sce}_FOS{fos}_hourly.pkl')
         
         df_daily = get_daily_values(df,'sum')
         df_daily.to_pickle(path_to_plot+f'Data/ERAA23_ENS_TY2033_Scenario{sce}_FOS{fos}_daily.pkl')
+        print(f'Saved EVA {sce} FOS {fos} (daily)')
 
 
 

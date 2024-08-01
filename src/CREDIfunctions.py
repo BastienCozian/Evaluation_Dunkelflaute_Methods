@@ -670,6 +670,9 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
 
         # Shift the index of CREDI events by one day (CREDI from day 1 to day 3 is indexed at day 4)
         DF_date = DF_date - dtime.timedelta(1)
+        if (DF_date.month == 2) & (DF_date.day == 29):
+            print(f'Shift {DF_date} by one additionnal day to avoid Feb 29th')
+            DF_date = DF_date - dtime.timedelta(1)
 
         if DF_date in common_index:
 
