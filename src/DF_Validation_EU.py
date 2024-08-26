@@ -699,7 +699,7 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 
 #%%
 # =================================================================
-# Plot F-score | Compare RL, DD, RES for scenario B
+# Plot F-score | Stoop 23 | Compare RL, DD, RES for scenario B
 # =================================================================
 
 # ---------------------------------------------
@@ -710,8 +710,8 @@ PERIOD_length_days = 1
 PERIOD_cluster_days = 1
 
 # Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
-#zone = 'PL00'
-#agg_zone = zone; zones_list = [zone]
+zone = 'DE00'
+agg_zone = zone; zones_list = [zone]
 
 #agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
 #agg_zone = 'CoreRegion'; zones_list = ['BE00', 'FR00', 'NL00', 'DE00', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00'] # Luxembourg is not in demand dataset
@@ -946,6 +946,326 @@ plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
 print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 
 
+#%%
+# ---------------------------------------------
+#  Plot only F
+# ---------------------------------------------
+
+# Load data
+stat_df = pickle.load(open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "rb"))
+
+x=stat_df[1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+quantiles_dict = dict()
+min_dict = dict()
+max_dict = dict()
+for ener_var in ['RL', 'DD', 'LWS']:
+    quantiles_dict[ener_var] = dict()
+    min_dict[ener_var] = dict()
+    max_dict[ener_var] = dict()
+    for metric in ['F', 'TP', 'TN', 'FP', 'FN', 'PR', 'RE']:
+        quantiles_dict[ener_var][metric] = np.quantile([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], [0.25, 0.5, 0.75], axis=0)
+        min_dict[ener_var][metric] = np.min([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], axis=0)
+        max_dict[ener_var][metric] = np.max([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], axis=0)
+
+# Percentile for peak F-score
+ener_var = 'RL'
+metric = 'F'
+F_max = quantiles_dict[ener_var][metric][1].max()
+p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
+print(f"RL3 (T=1): F_max = {F_max}, p_max = {p_max}")
+
+fig, axs = plt.subplots(1, 1, figsize=(5, 4))
+fig.suptitle(f'Method Stoop 2023 for {agg_zone} (T={PERIOD_length_days}d)')
+
+# Event time series
+
+metric = 'F'
+for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
+    axs.plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs.fill_between(x, min_dict[ener_var][metric], max_dict[ener_var][metric], color=dt_colors[ncolor], alpha=0.5)
+    #axs.plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    #axs.plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs.set_ylabel('F-Score')
+axs.set_xlabel("Percentile of top CREDI events")
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs.legend(facecolor="white", loc='upper right', framealpha=1)
+
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.pdf", dpi=300)
+#plt.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
+# =================================================================
+# Plot F-score | Otero 22 | Compare RL, DD, RES for scenario B
+# =================================================================
+
+# ---------------------------------------------
+# User defined parameters
+# ---------------------------------------------
+
+# Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
+zone = 'FR00'
+agg_zone = zone; zones_list = [zone]
+
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CoreRegion'; zones_list = ['BE00', 'FR00', 'NL00', 'DE00', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CSA'; zones_list = ['PT00', 'ES00', 'BE00', 'FR00', 'NL00', 'DE00', 'DKW1', 'CH00', 'ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00', 'BA00', 'RS00', 'ME00', 'MK00', 'GR00', 'BG00'] # (Part of) Continental Synchronous Area (based on available data). 'DKE1' is part of the Nordic Zone. No data for ['FR15', 'MD00', 'UA01', 'UA02', 'CR00', 'TR00'].
+#agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
+#agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
+#agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
+
+scenario_EVA = 'B'
+
+figname = f"Validation_Otero22_ENS_scenario{scenario_EVA}_{agg_zone}"
+
+
+
+# ---------------------------------------------
+# Compute data for figure (~ 15s per variable and percentile)
+# ---------------------------------------------
+start_time = time.time()
+
+
+# For every percentile threshold
+# TODO: the results F, TP, FN, ... are Series objects, so that pd.concat doesn't work
+# Change the get_f_score method so that the results is a proper dataframe containing all the statistics
+# Then delete the concatting of the STatistics and directly continue with appending the drought types
+
+# --- Aggregation at the agg_zone level ---
+# We create new dataframe that are organized in te same way as original dataframe, 
+# but the column are not SZON but the name of the aggregation region.
+# This is convenient to reuse the same code structure
+df_agg_gen_d = pd.DataFrame()
+df_agg_dem_d = pd.DataFrame()
+df_agg_RL_d  = pd.DataFrame()
+df_agg_old_ENS_d = pd.DataFrame()
+
+df_agg_gen_d[agg_zone] = data3_gen_d.loc[('HIST')][zones_list].sum(axis=1)
+df_agg_dem_d[agg_zone] = data3_dem_d.loc[('HIST')][zones_list].sum(axis=1)
+df_agg_RL_d[agg_zone]  = data3_RL_d.loc[('HIST')][zones_list].sum(axis=1)
+
+# --- end of aggregation ----
+
+stat_df = dict()
+for FOS in range(1, 15+1):
+
+    df_agg_ENS_fos_d = pd.DataFrame()
+    df_agg_ENS_fos_d[agg_zone] = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_daily.pkl')[zones_list].sum(axis=1)
+    
+    p_list  = []
+    for p in range(len(LWS_percs)):
+        ## Otero
+        # Find capacity thresholds
+        Otero_rl3_thresh,  Otero_rl3_sigma  = get_thresholds(df_agg_RL_d,  RL_percs[p] , start_date='1982-01-01', end_date='2016-12-31', empirical=True)
+        Otero_dd3_thresh,  Otero_dd3_sigma  = get_thresholds(df_agg_dem_d,  DD_percs[p] , start_date='1982-01-01', end_date='2016-12-31', empirical=True)
+        Otero_lws3_thresh,  Otero_lws3_sigma  = get_thresholds(df_agg_gen_d,  LWS_percs[p] , start_date='1982-01-01', end_date='2016-12-31', empirical=True)
+
+        # Mask the data / Detect Drought days
+        Otero_rl3_mask  = mask_data(df_agg_RL_d,  Otero_rl3_thresh,  False, 1, 0)
+        Otero_dd3_mask  = mask_data(df_agg_dem_d,  Otero_dd3_thresh,  False, 1, 0)
+        Otero_lws3_mask = mask_data(df_agg_gen_d,  Otero_lws3_thresh,  True, 1, 0)
+        ENS_fos_mask    = mask_data(df_agg_ENS_fos_d, 0, False, 2, 0)
+
+        # Calculate F (compared to ENS)
+        Otero_rl3_stat  = get_f_score(ENS_fos_mask, Otero_rl3_mask,  beta=1)
+        Otero_dd3_stat  = get_f_score(ENS_fos_mask, Otero_dd3_mask,  beta=1)
+        Otero_lws3_stat  = get_f_score(ENS_fos_mask, Otero_lws3_mask,  beta=1)
+
+        # Create Dataframe
+        p_list.append( pd.concat([Otero_rl3_stat, Otero_lws3_stat, Otero_dd3_stat], keys=['RL', 'LWS', 'DD'],   names=['Drought type']))
+        print('Done '+str(p+1)+'/'+str(len(LWS_percs)))
+
+    stat_df[FOS] = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
+    print(f'    Done FOS {FOS}')
+ 
+end_time = time.time()
+print(f"Duration: {timedelta(seconds=end_time - start_time)}")
+
+# Save the Data
+# DataFrame: multiindex = (LWS3, LWS4, RL3, RL4),(F, TP, FN, FP, TN),(threshholds);  columns=countries
+pickle.dump(stat_df, open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "wb"))
+
+
+#%%
+# ---------------------------------------------
+#  Plot F / threshold (comparing to ENS / validation)
+# ---------------------------------------------
+
+# Load data
+stat_df = pickle.load(open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "rb"))
+
+x=stat_df[1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+quantiles_dict = dict()
+min_dict = dict()
+max_dict = dict()
+for ener_var in ['RL', 'DD', 'LWS']:
+    quantiles_dict[ener_var] = dict()
+    min_dict[ener_var] = dict()
+    max_dict[ener_var] = dict()
+    for metric in ['F', 'TP', 'TN', 'FP', 'FN']:
+        quantiles_dict[ener_var][metric] = np.quantile([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], [0.25, 0.5, 0.75], axis=0)
+        min_dict[ener_var][metric] = np.min([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], axis=0)
+        max_dict[ener_var][metric] = np.max([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], axis=0)
+
+# Percentile for peak F-score
+ener_var = 'RL'
+metric = 'F'
+F_max = quantiles_dict[ener_var][metric][1].max()
+p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
+print(f"RL3 (T=1): F_max = {F_max}, p_max = {p_max}")
+
+fig, axs = plt.subplots(3, 2, figsize=(10,12))
+fig.suptitle(f'Otero Method for {agg_zone}')
+
+# Event time series
+idx, idy = 0, [0,1]
+ax_big = plt.subplot(3, 1, 1)
+metric = 'F'
+for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
+    ax_big.plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    ax_big.fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    ax_big.plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    ax_big.plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+ax_big.set_ylabel('F-Score')
+ax_big.set_xlabel("Percentile of top energy droughts events")
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
+axs[0,0].remove()
+axs[0,1].remove()
+
+idx, idy = 1, 0
+metric = 'TP'
+for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
+    axs[idx, idy].plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs[idx, idy].set_ylabel('True Positives (DF detected, when ENS)')
+axs[idx, idy].set_xlabel("Percentile of top energy droughts events")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 1, 1
+metric = 'TN'
+for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
+    axs[idx, idy].plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs[idx, idy].set_ylabel('True Negatives (no DF detected, when no ENS)')
+axs[idx, idy].set_xlabel("Percentile of top energy droughts events")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 2, 0
+metric = 'FP'
+for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
+    axs[idx, idy].plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs[idx, idy].set_ylabel('False Positives (DF detected, when no ENS)')
+axs[idx, idy].set_xlabel("Percentile of top energy droughts events")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 2, 1
+metric = 'FN'
+for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
+    axs[idx, idy].plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs[idx, idy].set_ylabel('False Negatives (No DF detected, when ENS)')
+axs[idx, idy].set_xlabel("Percentile of top energy droughts events")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+#plt.close()
+
+print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
+
+
+#%%
+# ---------------------------------------------
+#  Plot only F
+# ---------------------------------------------
+
+# Load data
+stat_df = pickle.load(open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "rb"))
+
+x=stat_df[1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+quantiles_dict = dict()
+min_dict = dict()
+max_dict = dict()
+for ener_var in ['RL', 'DD', 'LWS']:
+    quantiles_dict[ener_var] = dict()
+    min_dict[ener_var] = dict()
+    max_dict[ener_var] = dict()
+    for metric in ['F', 'TP', 'TN', 'FP', 'FN']:
+        quantiles_dict[ener_var][metric] = np.quantile([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], [0.25, 0.5, 0.75], axis=0)
+        min_dict[ener_var][metric] = np.min([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], axis=0)
+        max_dict[ener_var][metric] = np.max([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], axis=0)
+
+# Percentile for peak F-score
+ener_var = 'RL'
+metric = 'F'
+F_max = quantiles_dict[ener_var][metric][1].max()
+p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
+print(f"RL3 (T=1): F_max = {F_max}, p_max = {p_max}")
+
+fig, axs = plt.subplots(1, 1, figsize=(5, 4))
+axs.set_title(f'Method Otero 2022 for {agg_zone}')
+
+# Event time series
+
+metric = 'F'
+for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
+    axs.plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs.fill_between(x, min_dict[ener_var][metric], max_dict[ener_var][metric], color=dt_colors[ncolor], alpha=0.5)
+    #axs.plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    #axs.plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs.set_ylabel('F-Score')
+axs.set_xlabel("Percentile of top energy droughts events")
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs.legend(facecolor="white", loc='upper right', framealpha=1)
+
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.pdf", dpi=300)
+#plt.close()
 
 
 

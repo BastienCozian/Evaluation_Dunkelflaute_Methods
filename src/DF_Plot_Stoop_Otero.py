@@ -21,6 +21,8 @@ from datetime import timedelta
 import datetime as dtime
 import time
 import pickle
+from scipy import stats
+
 
 from Dunkelflaute_function_library import get_zones, get_thresholds, detect_drought_Otero22, mask_data, get_f_score, get_df_timerange, lin_reg
 from CREDIfunctions import Modified_Ordinal_Hour, Climatology_Hourly, Climatology_Hourly_Rolling, \
@@ -446,11 +448,11 @@ scenario_EVA = 'B'
 # Non-aggregated zones
 # Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
 
-#zone = 'DE00'
-#agg_zone = zone; zones_list = [zone]
+zone = 'DE00'
+agg_zone = zone; zones_list = [zone]
 
 # Agregated zones
-agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
 #agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
 #agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
 #agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
@@ -458,7 +460,7 @@ agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] 
 
 # --- Percentile for peak F-score. Computed in `DF_Validation_Stoop.py`
 # FOR DE00
-#p_max = 0.0136
+#p_max = 0.014  #0.0136
 #p_max = 0.022  # TODO: check with new data
 #p_max = 0.0356 # TODO: check with new data
 #p_max = 0.044  # TODO: check with new data
@@ -470,7 +472,7 @@ agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] 
 #p_max = 0.0204 # TODO: check with new data
 
 # FOR CWE
-p_max = 0.014 # T=1
+#p_max = 0.014 # T=1
 #p_max = 0.038 # T=3
 #p_max = 0.07 # T=5
 #p_max = 0.136 # T=7
@@ -603,8 +605,67 @@ plt.savefig(f"{path_to_plot}Correlation/{figname}.{plot_format}", dpi=300)
 
 print(f"Saved {path_to_plot}Correlation/{figname}.{plot_format}")
 
+# %%
+# ---------------------------------------------
+# Plot only RL
+# ---------------------------------------------
 
+fig, ax = plt.subplots(1, 1, figsize=(5,5))
 
+r_value = dict()
+rho_value = dict()
+
+for FOS in range(15, 0, -1):
+    x = rl3_DF_all[FOS]
+    y = rl3_sum_ENS_all[FOS]
+    # Linear regression
+    df_reg, intercept, slope, r_value[FOS], p_value, reg_trend = lin_reg(x, y)
+    # Spearman rank-order correlation coefficient
+    rho_value[FOS], p_spearman = stats.spearmanr(x, y)
+    
+    """
+    if p_value < 0.05:
+        ls  = 'solid'
+    else:
+        ls = 'dotted'
+    """
+    ls  = 'solid'
+    if FOS == 1:
+        color = dt_colors[0]
+        label = f'FOS n°{FOS}'
+        alpha = 1
+    elif FOS == 2:
+        color = 'grey'
+        label = 'other FOS'
+        alpha = 0.4
+    else:
+        color = 'grey'
+        label = ''
+        alpha = 0.4
+    ax.scatter(x, y, color=color, label=label, alpha=alpha)
+    ax.plot(df_reg, c=color, linestyle=ls)
+
+    print(f'RL (3.1), FOS {FOS}: intercept={intercept}, slope={slope}, r_value={r_value[FOS]}, p_value={p_value}, reg_trend={reg_trend}')
+
+r_q50 = np.quantile([r_value[FOS] for FOS in range(1, 15+1)], 0.5)
+r_min = np.min([r_value[FOS] for FOS in range(1, 15+1)])
+r_max = np.max([r_value[FOS] for FOS in range(1, 15+1)])
+rho_q50 = np.quantile([rho_value[FOS] for FOS in range(1, 15+1)], 0.5)
+rho_min = np.min([rho_value[FOS] for FOS in range(1, 15+1)])
+rho_max = np.max([rho_value[FOS] for FOS in range(1, 15+1)])
+
+#ax.set_title(f'RL (PECD 3.1), Scenario {scenario_EVA}, {agg_zone}, T={PERIOD_length_days}, Tc={PERIOD_cluster_days}, p={p_max})\n r={np.round(r_q50, 2)} [{np.round(r_min, 2)}, {np.round(r_max, 2)}] (Q50 [min, max])')
+ax.set_title(r'$r=$'+f'{np.round(r_q50, 2)} [{np.round(r_min, 2)}, {np.round(r_max, 2)}]\n'+r'$\rho=$'+f'{np.round(rho_q50, 2)} [{np.round(rho_min, 2)}, {np.round(rho_max, 2)}]')
+
+ax.set_ylabel('Summed up ENS [GWh]')
+ax.set_xlabel('CREDI [GWh]')
+ax.legend(facecolor="white", loc='upper left', framealpha=1)
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Correlation/{figname}.pdf")
+#plt.close()
 
 
 
@@ -624,7 +685,7 @@ print(f"Saved {path_to_plot}Correlation/{figname}.{plot_format}")
 
 # %%
 # ===================================================================
-# Plot Correlation of ENS/Severity and ENS/Duration | New ENS dataset
+# Correlation Otero 22 | ENS/Severity and ENS/Duration | New ENS dataset
 # ===================================================================
 
 # ---------------------------------------------
@@ -635,11 +696,11 @@ scenario_EVA = 'B'
 
 # --- Non-aggregated zones
 # Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
-#zone = 'FR00'
-#agg_zone = zone; zones_list = [zone]
+zone = 'DE00'
+agg_zone = zone; zones_list = [zone]
 
 # --- Agregated zones
-agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
 #agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
 #agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
 #agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
@@ -647,7 +708,7 @@ agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] 
 # Percentile thresholds & capacity reference year from Otero et al. 2022
 
 # FOR DE00
-#p_max = 0.0132
+p_max = 0.014 # 0.0132
 #p_max = 0.022  # TODO: check for Otero with new data
 #p_max = 0.0356 # TODO: check for Otero with new data
 #p_max = 0.044  # TODO: check for Otero with new data
@@ -659,7 +720,7 @@ agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] 
 #p_max = 0.0204 # TODO: check for Otero with new data
 
 # FOR CWE
-p_max = 0.0176
+#p_max = 0.0176
 
 # FOR NO
 #p_max = 0.0036 # T=1  # TODO: check for Otero with new data
@@ -841,8 +902,131 @@ plt.savefig(f"{path_to_plot}Correlation/{figname}.{plot_format}", dpi=300)
 print(f"Saved {path_to_plot}Correlation/{figname}.{plot_format}")
 
 
+# %%
+# ---------------------------------------------
+# Plot only RL
+# ---------------------------------------------
 
 
+# ----------
+#  Severity
+# ----------
+
+fig, axs = plt.subplots(1, 1, figsize=(5,5))
+
+idx = 0
+#print(agg_zone+' RL  (4.1) Sev R value: '+str(lin_reg(x, y)[3]))
+r_value = dict()
+rho_value = dict()
+for FOS in range(15, 0, -1):
+
+    r_value[FOS] = dict()
+    rho_value[FOS] = dict()
+
+    # Get ENS for this FOS scenario
+    df_agg_ENS_fos_d = pd.DataFrame()
+    df_agg_ENS_fos_d[agg_zone] = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_daily.pkl')[zones_list].sum(axis=1)
+
+    for idx, ener_var, color_var, df_events in zip(range(1), ['RL'], dt_colors[:1], [rl3_events]):
+
+        if FOS == 1:
+            color = color_var
+            label = f'FOS n°{FOS}'
+            alpha = 1
+        elif FOS == 2:
+            color = 'grey'
+            label = 'other FOS'
+            alpha = 0.4
+        else:
+            color = 'grey'
+            label = ''
+            alpha = 0.4
+
+        x = df_events.loc[('HIST', agg_zone),('Severity (adapted)')]
+        y = get_ENS_sums(df_agg_ENS_fos_d, df_events.loc[('HIST')], agg_zone)
+        # Only Energy drought with Sevverity >= 0
+        y = y[x >= 0]
+        x = x[x >= 0]
+        # Linear regression
+        df_reg, intercept, slope, r_value[FOS][ener_var], p_value, reg_trend = lin_reg(x, y)
+        # Spearman rank-order correlation coefficient
+        rho_value[FOS][ener_var], p_spearman = stats.spearmanr(x, y)
+
+        axs.scatter(x, y, color=color, label=label, alpha=0.5)
+        axs.plot(df_reg, c=color)
+        axs.set_ylabel('Summed up ENS [GWh]')
+        axs.set_xlabel('Severity')
+        axs.legend()
+
+for idx, ener_var in enumerate(['RL']):
+    r_q50 = np.quantile([r_value[FOS][ener_var] for FOS in range(1, 15+1)], 0.5)
+    r_min = np.min([r_value[FOS][ener_var] for FOS in range(1, 15+1)])
+    r_max = np.max([r_value[FOS][ener_var] for FOS in range(1, 15+1)])
+    rho_q50 = np.quantile([rho_value[FOS][ener_var] for FOS in range(1, 15+1)], 0.5)
+    rho_min = np.min([rho_value[FOS][ener_var] for FOS in range(1, 15+1)])
+    rho_max = np.max([rho_value[FOS][ener_var] for FOS in range(1, 15+1)])
+    #axs.set_title(f'{ener_var}, {agg_zone} (Scenario {scenario_EVA}, p={p_max})\n r={np.round(r_q50, 2)} [{np.round(r_min, 2)}, {np.round(r_max, 2)}] (Q50 [min, max])')
+    axs.set_title(r'$r=$'+f'{np.round(r_q50, 2)} [{np.round(r_min, 2)}, {np.round(r_max, 2)}]\n'+r'$\rho=$'+f'{np.round(rho_q50, 2)} [{np.round(rho_min, 2)}, {np.round(rho_max, 2)}]')
+
+plt.savefig(f"{path_to_plot}Correlation/{figname}_severity.pdf")
+
+# ----------
+#  Duration
+# ----------
+
+fig, axs = plt.subplots(1, 1, figsize=(5,5))
+
+idx = 0
+#print(agg_zone+' RL  (4.1) Sev R value: '+str(lin_reg(x, y)[3]))
+r_value = dict()
+for FOS in range(15, 0, -1):
+
+    r_value[FOS] = dict()
+    rho_value[FOS] = dict()
+
+    # Get ENS for this FOS scenario
+    df_agg_ENS_fos_d = pd.DataFrame()
+    df_agg_ENS_fos_d[agg_zone] = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_daily.pkl')[zones_list].sum(axis=1)
+
+    for idx, ener_var, color_var, df_events in zip(range(1), ['RL'], dt_colors[:1], [rl3_events]):
+
+        if FOS == 1:
+            color = color_var
+            label = f'FOS n°{FOS}'
+            alpha = 1
+        elif FOS == 2:
+            color = 'grey'
+            label = 'other FOS'
+            alpha = 0.4
+        else:
+            color = 'grey'
+            label = ''
+            alpha = 0.4
+
+        x = df_events.loc[('HIST', agg_zone),('Duration')]
+        y = get_ENS_sums(df_agg_ENS_fos_d, df_events.loc[('HIST')], agg_zone)
+        # Linear regression
+        df_reg, intercept, slope, r_value[FOS][ener_var], p_value, reg_trend = lin_reg(x, y)
+        # Spearman rank-order correlation coefficient
+        rho_value[FOS][ener_var], p_spearman = stats.spearmanr(x, y)
+
+        axs.scatter(x, y, color=color, label=label, alpha=0.5)
+        axs.plot(df_reg, c=color)
+        axs.set_ylabel('Summed up ENS [GWh]')
+        axs.set_xlabel('Duration [d]')
+        axs.legend()
+
+for idx, ener_var in enumerate(['RL']):
+    r_q50 = np.quantile([r_value[FOS][ener_var] for FOS in range(1, 15+1)], 0.5)
+    r_min = np.min([r_value[FOS][ener_var] for FOS in range(1, 15+1)])
+    r_max = np.max([r_value[FOS][ener_var] for FOS in range(1, 15+1)])
+    rho_q50 = np.quantile([rho_value[FOS][ener_var] for FOS in range(1, 15+1)], 0.5)
+    rho_min = np.min([rho_value[FOS][ener_var] for FOS in range(1, 15+1)])
+    rho_max = np.max([rho_value[FOS][ener_var] for FOS in range(1, 15+1)])
+    #axs.set_title(f'{ener_var}, {agg_zone} (Scenario {scenario_EVA}, p={p_max})\n r={np.round(r_q50, 2)} [{np.round(r_min, 2)}, {np.round(r_max, 2)}] (Q50 [min, max])')
+    axs.set_title(r'$r=$'+f'{np.round(r_q50, 2)} [{np.round(r_min, 2)}, {np.round(r_max, 2)}]\n'+r'$\rho=$'+f'{np.round(rho_q50, 2)} [{np.round(rho_min, 2)}, {np.round(rho_max, 2)}]')
+
+plt.savefig(f"{path_to_plot}Correlation/{figname}_duration.pdf")
 
 
 
@@ -1121,8 +1305,8 @@ PERIOD_cluster_days = 1
 
 # Non-aggregated zones
 # Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
-#zone = 'DE00'
-#agg_zone = zone; zones_list = [zone]
+zone = 'DE00'
+agg_zone = zone; zones_list = [zone]
 
 # Aggregated zones
 #agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
@@ -1363,6 +1547,62 @@ plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
 
 print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 
+
+#%%
+# ---------------------------------------------
+#  Only F
+# ---------------------------------------------
+
+# Load data
+stat_df = pickle.load(open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "rb"))
+
+x=stat_df[1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+quantiles_dict = dict()
+min_dict = dict()
+max_dict = dict()
+for ener_var in ['RL (Stoop)', 'RL (Otero)']:
+    quantiles_dict[ener_var] = dict()
+    min_dict[ener_var] = dict()
+    max_dict[ener_var] = dict()
+    for metric in ['F', 'TP', 'TN', 'FP', 'FN']:
+        quantiles_dict[ener_var][metric] = np.quantile([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], [0.25, 0.5, 0.75], axis=0)
+        min_dict[ener_var][metric] = np.min([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], axis=0)
+        max_dict[ener_var][metric] = np.max([stat_df[FOS].loc[(x, ener_var,  metric),(agg_zone)] for FOS in range(1, 15+1)], axis=0)
+
+# Percentile for peak F-score
+ener_var = 'RL (Stoop)'
+metric = 'F'
+F_max = quantiles_dict[ener_var][metric][1].max()
+p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
+print(f"{ener_var}: F_max = {F_max}, p_max = {p_max}")
+
+ener_var = 'RL (Otero)'
+metric = 'F'
+F_max = quantiles_dict[ener_var][metric][1].max()
+p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
+print(f"{ener_var}: F_max = {F_max}, p_max = {p_max}")
+
+
+fig, axs = plt.subplots(1, 1, figsize=(5, 4))
+
+# Event time series
+metric = 'F'
+for ncolor, ener_var, label in zip(range(2), ['RL (Stoop)', 'RL (Otero)'], ["RL (Stoop'23)", "RL (Otero'22)"]):
+    axs.plot(x, quantiles_dict[ener_var][metric][1], label=label,  color=dt_colors[ncolor], alpha=0.8)
+    axs.fill_between(x, min_dict[ener_var][metric], max_dict[ener_var][metric], color=dt_colors[ncolor], alpha=0.5)
+    #axs.plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    #axs.plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs.set_ylabel('F-Score')
+axs.set_xlabel("Percentile of top events")
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs.legend(facecolor="white", loc='upper right', framealpha=1)
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.pdf")
+#plt.close()
 
 
 
