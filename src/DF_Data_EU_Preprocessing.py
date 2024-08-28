@@ -528,6 +528,7 @@ print('Preprocessed PECDv3.1 data')
 
 data3_ac_national_h = pd.DataFrame()
 data3_ac_national_d = pd.DataFrame()
+data3_CF_national_h = pd.DataFrame()
 
 zones_szon = SZON_intersection_Demand_IC
 
@@ -553,11 +554,16 @@ for zone_szon in zones_szon:
     # sum up all the zones per country
     data3_ac_national_h[zone_szon] = data3_ac[pecd_of_szon].sum(axis=1)
     data3_ac_national_d[zone_szon] = data3_ac_sum_d[pecd_of_szon].sum(axis=1)
+    data3_CF_national_h[zone_szon] = data3_ac[pecd_of_szon].sum(axis=1) / data_cap[pecd_of_szon].sum(axis=1) # CF = generation / IC
+
+# Save hourly Capacity Factor at national (SZON) scale
+data3_CF_national_h.to_pickle(path_to_plot+'Data/PECD3_CF_TY'+str(ty_pecd3)+'_national_hourly.pkl')
 
 # Sum up WOF, WON and SPV
 data3_ac_tsum_h = data3_ac_national_h.groupby(['Scenario','Date']).sum()
 data3_ac_tsum_d = data3_ac_national_d.groupby(['Scenario','Date']).sum()
 
+# Save RES generation at national (SZON) scale
 data3_ac_tsum_h.to_pickle(path_to_plot+'Data/PECD3_Generation_TY'+str(ty_pecd3)+'_national_hourly.pkl')
 data3_ac_tsum_d.to_pickle(path_to_plot+'Data/PECD3_Generation_TY'+str(ty_pecd3)+'_national_daily.pkl')
 
@@ -565,6 +571,8 @@ print('Summed up all the zones of a country for PECDv3.1')
 
 
 """
+# (OLD)
+
 # Calculate national CFs (for Li et al 21 method)
 # 1) use CF * installed capacity = generation (for all zones & technologies)
 # already pre-made (data_ac)
