@@ -235,11 +235,11 @@ for sce in ['A', 'B']:
             df.loc[correct_date, row['Bidding Zone']] = row['ENS (MWh)']
 
         # Uncomment to save hourly data (not needed for now)
-        #df.to_pickle(path_to_plot+f'Data/ERAA23_ENS_TY2033_Scenario{sce}_FOS{fos}_hourly.pkl')
+        df.to_pickle(path_to_plot+f'Data/ERAA23_ENS_TY2033_Scenario{sce}_FOS{fos}_hourly.pkl')
         
         df_daily = get_daily_values(df,'sum')
         df_daily.to_pickle(path_to_plot+f'Data/ERAA23_ENS_TY2033_Scenario{sce}_FOS{fos}_daily.pkl')
-        print(f'Saved EVA {sce} FOS {fos} (daily)')
+        print(f'Saved EVA {sce} FOS {fos}')
 
 
 
