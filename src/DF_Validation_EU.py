@@ -20,7 +20,7 @@ import datetime as dtime
 import time
 import pickle
 
-from Dunkelflaute_function_library import get_zones, get_thresholds, detect_drought_Otero22, mask_data, get_f_score, get_df_timerange, lin_reg
+from Dunkelflaute_function_library import get_zones, get_thresholds, detect_drought_Otero22, mask_data, get_f_score, get_df_timerange, lin_reg, detect_drought_Li21, mask_df_by_entries
 from CREDIfunctions import Modified_Ordinal_Hour, Climatology_Hourly, Climatology_Hourly_Rolling, \
     Climatology_Hourly_Weekly_Rolling, get_CREDI_events, get_f_score_CREDI, get_f_score_CREDI_new, compute_timeline, get_correlation_CREDI
 
@@ -73,13 +73,17 @@ data4_dem_h = pd.read_pickle(path_to_data+'ETM_demand_TY'+str(ty_pecd4)+'_hourly
 data4_REP_h = pd.read_pickle(path_to_data+'PECD4_Generation_TY'+str(ty_pecd4)+'_national_hourly.pkl')
 data3_REP_h = pd.read_pickle(path_to_data+'PECD3_Generation_TY'+str(ty_pecd3)+'_national_hourly.pkl')
 
+data3_CF_h = pd.read_pickle(path_to_data+'PECD3_CF_TY'+str(ty_pecd3)+'_national_hourly.pkl')
+
 # Weight REP for experimenting
 start_date = '1982-01-01 00:00:00'
 end_date   = '2016-12-31 23:00:00'
 data3_cropped1 = data3_REP_h.query('Date>=@start_date and Date <= @end_date')
 data4_cropped1 = data4_REP_h.query('Date>=@start_date and Date <= @end_date')
+data3_CF_crop = data3_CF_h.query('Date>=@start_date and Date <= @end_date')
 data3_gen_h = data3_cropped1[~((data3_cropped1.index.get_level_values(1).day == 29) & (data3_cropped1.index.get_level_values(1).month == 2))]
 data4_gen_h = data4_cropped1[~((data4_cropped1.index.get_level_values(1).day == 29) & (data4_cropped1.index.get_level_values(1).month == 2))]
+data3_CF_h  = data3_CF_crop[~((data3_CF_crop.index.get_level_values(2).day == 29) & (data3_CF_crop.index.get_level_values(2).month == 2))]
 
 data3_RL_h = data3_dem_h - w*data3_gen_h
 data4_RL_h = data4_dem_h - w*data4_gen_h
@@ -951,6 +955,24 @@ print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
 #  Plot only F
 # ---------------------------------------------
 
+PERIOD_length_days = 1
+PERIOD_cluster_days = 1
+
+# Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
+zone = 'DE00'
+agg_zone = zone; zones_list = [zone]
+
+#agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CoreRegion'; zones_list = ['BE00', 'FR00', 'NL00', 'DE00', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00'] # Luxembourg is not in demand dataset
+#agg_zone = 'CSA'; zones_list = ['PT00', 'ES00', 'BE00', 'FR00', 'NL00', 'DE00', 'DKW1', 'CH00', 'ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00', 'BA00', 'RS00', 'ME00', 'MK00', 'GR00', 'BG00'] # (Part of) Continental Synchronous Area (based on available data). 'DKE1' is part of the Nordic Zone. No data for ['FR15', 'MD00', 'UA01', 'UA02', 'CR00', 'TR00'].
+#agg_zone = 'NO'; zones_list = ['NOS0', 'NOM1', 'NON1']
+#agg_zone = 'SE'; zones_list = ['SE01', 'SE03', 'SE04'] # There is no SE02 data in the new and old ENS dataset
+#agg_zone = 'IT'; zones_list = ['ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA']
+
+scenario_EVA = 'B'
+
+figname = f"Validation_Stoop24_ENS_scenario{scenario_EVA}_{agg_zone}_T{PERIOD_length_days}"
+
 # Load data
 stat_df = pickle.load(open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "rb"))
 
@@ -976,7 +998,7 @@ p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
 print(f"RL3 (T=1): F_max = {F_max}, p_max = {p_max}")
 
 fig, axs = plt.subplots(1, 1, figsize=(5, 4))
-fig.suptitle(f'Method Stoop 2023 for {agg_zone} (T={PERIOD_length_days}d)')
+axs.set_title(f'Method Stoop 2023 for {agg_zone} (T={PERIOD_length_days}d)')
 
 # Event time series
 
@@ -990,6 +1012,7 @@ axs.set_ylabel('F-Score')
 axs.set_xlabel("Percentile of top CREDI events")
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs.legend(facecolor="white", loc='upper right', framealpha=1)
+axs.grid(axis='y')
 
 
 plt.tight_layout()
@@ -1024,7 +1047,7 @@ plt.savefig(f"{path_to_plot}Validation/{figname}.pdf", dpi=300)
 # ---------------------------------------------
 
 # Same structure as for "aggregated zone" so that the code work for aggregated and non-agregated zones
-zone = 'FR00'
+zone = 'DE00'
 agg_zone = zone; zones_list = [zone]
 
 #agg_zone = 'CWE'; zones_list = ['AT00', 'BE00', 'CH00', 'DE00', 'FR00', 'NL00'] # Luxembourg is not in demand dataset
@@ -1148,7 +1171,7 @@ for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
     ax_big.plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     ax_big.plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
 ax_big.set_ylabel('F-Score')
-ax_big.set_xlabel("Percentile of top energy droughts events")
+ax_big.set_xlabel("Percentile of top energy drought events")
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
 axs[0,0].remove()
@@ -1162,7 +1185,7 @@ for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
 axs[idx, idy].set_ylabel('True Positives (DF detected, when ENS)')
-axs[idx, idy].set_xlabel("Percentile of top energy droughts events")
+axs[idx, idy].set_xlabel("Percentile of top energy drought events")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -1175,7 +1198,7 @@ for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
 axs[idx, idy].set_ylabel('True Negatives (no DF detected, when no ENS)')
-axs[idx, idy].set_xlabel("Percentile of top energy droughts events")
+axs[idx, idy].set_xlabel("Percentile of top energy drought events")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -1188,7 +1211,7 @@ for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
 axs[idx, idy].set_ylabel('False Positives (DF detected, when no ENS)')
-axs[idx, idy].set_xlabel("Percentile of top energy droughts events")
+axs[idx, idy].set_xlabel("Percentile of top energy drought events")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
@@ -1201,7 +1224,7 @@ for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
     axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
 axs[idx, idy].set_ylabel('False Negatives (No DF detected, when ENS)')
-axs[idx, idy].set_xlabel("Percentile of top energy droughts events")
+axs[idx, idy].set_xlabel("Percentile of top energy drought events")
 axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
@@ -1256,10 +1279,258 @@ for ncolor, ener_var in enumerate(['RL', 'DD', 'LWS']):
     #axs.plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
     #axs.plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
 axs.set_ylabel('F-Score')
-axs.set_xlabel("Percentile of top energy droughts events")
+axs.set_xlabel("Percentile of top energy drought events")
 #axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
 axs.legend(facecolor="white", loc='upper right', framealpha=1)
+axs.grid(axis='y')
 
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.pdf", dpi=300)
+#plt.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
+# =================================================================
+# Plot F-score | Li 21 | Compare RL, DD, RES for scenario B
+# =================================================================
+
+# ---------------------------------------------
+# User defined parameters
+# ---------------------------------------------
+
+# No "aggregated zone" because we cannot sum capacity factor. For this, we would need to devide by the installed capacity
+zone = 'DE00'
+#agg_zone = zone; zones_list = [zone]
+
+scenario_EVA = 'B'
+
+figname = f"Validation_Li21_ENS_scenario{scenario_EVA}_{zone}"
+
+
+
+# ---------------------------------------------
+# Compute data for figure (~ 15s per variable and percentile)
+# ---------------------------------------------
+start_time = time.time()
+
+# Percentile thresholds to investigate
+CF_threshs = LWS_percs
+
+# For every percentile threshold
+# TODO: the results F, TP, FN, ... are Series objects, so that pd.concat doesn't work
+# Change the get_f_score method so that the results is a proper dataframe containing all the statistics
+# Then delete the concatting of the STatistics and directly continue with appending the drought types
+
+
+
+stat_df = dict()
+for FOS in range(1, 15+1):
+
+    df_agg_ENS_fos_h = pd.DataFrame()
+    df_agg_ENS_fos_h[[zone]] = pd.read_pickle(path_to_data+f'ERAA23_ENS_TY2033_Scenario{scenario_EVA}_FOS{FOS}_hourly.pkl')[[zone]]
+    
+    p_list  = []
+    for p in range(len(LWS_percs)):
+
+        # Mask the data / Detect Drought days WRONG CHANGE
+        # TODO: 1) Make the masking right
+        # Create a second, daily mask (for only >24h events)
+
+        # Detect drought hours and events
+        cfd3_hours, cfd3_events = detect_drought_Li21(['HIST'],  [zone], data3_CF_h[[zone]], CF_threshs[p])
+        cfd3_events_gret24 = cfd3_events[cfd3_events['Duration']>24]
+
+        # Mask the data / Detect Drought days
+        cf3_mask_h = mask_df_by_entries(data3_CF_h[[zone]], cfd3_hours, ['HIST'],  1, 0).loc['HIST']
+        ENS_fos_mask_h = mask_data(df_agg_ENS_fos_h, 0, False, 2, 0)
+
+        # Calculate F (compared to ENS)
+        cf3_stat = get_f_score(ENS_fos_mask_h, cf3_mask_h, beta=1)
+
+        # Create Dataframe
+        p_list.append( pd.concat([cf3_stat], keys=['CF'],   names=['Drought type']))
+        print('Done '+str(p+1)+'/'+str(len(LWS_percs)))
+
+    stat_df[FOS] = pd.concat(p_list,  keys=LWS_percs, names=['Percentiles'])
+    print(f'    Done FOS {FOS}')
+ 
+end_time = time.time()
+print(f"Duration: {timedelta(seconds=end_time - start_time)}")
+
+# Save the Data
+# DataFrame: multiindex = (LWS3, LWS4, RL3, RL4),(F, TP, FN, FP, TN),(threshholds);  columns=countries
+pickle.dump(stat_df, open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "wb"))
+
+
+#%%
+# ---------------------------------------------
+#  Plot F / threshold (comparing to ENS / validation)
+# ---------------------------------------------
+
+# Load data
+stat_df = pickle.load(open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "rb"))
+
+x=stat_df[1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+quantiles_dict = dict()
+min_dict = dict()
+max_dict = dict()
+for ener_var in ['CF']:
+    quantiles_dict[ener_var] = dict()
+    min_dict[ener_var] = dict()
+    max_dict[ener_var] = dict()
+    for metric in ['F', 'TP', 'TN', 'FP', 'FN']:
+        quantiles_dict[ener_var][metric] = np.quantile([stat_df[FOS].loc[(x, ener_var,  metric),(zone)] for FOS in range(1, 15+1)], [0.25, 0.5, 0.75], axis=0)
+        min_dict[ener_var][metric] = np.min([stat_df[FOS].loc[(x, ener_var,  metric),(zone)] for FOS in range(1, 15+1)], axis=0)
+        max_dict[ener_var][metric] = np.max([stat_df[FOS].loc[(x, ener_var,  metric),(zone)] for FOS in range(1, 15+1)], axis=0)
+
+# Percentile for peak F-score
+ener_var = 'CF'
+metric = 'F'
+F_max = quantiles_dict[ener_var][metric][1].max()
+p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
+print(f"CF: F_max = {F_max}, p_max = {p_max}")
+
+fig, axs = plt.subplots(3, 2, figsize=(10,12))
+fig.suptitle(f'Li Method for {zone}')
+
+# Event time series
+idx, idy = 0, [0,1]
+ax_big = plt.subplot(3, 1, 1)
+metric = 'F'
+for ncolor, ener_var in enumerate(['CF']):
+    ax_big.plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    ax_big.fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    ax_big.plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    ax_big.plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+ax_big.set_ylabel('F-Score')
+ax_big.set_xlabel("Percentile of top energy drought events")
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+ax_big.legend(facecolor="white", loc='upper right', framealpha=1)
+axs[0,0].remove()
+axs[0,1].remove()
+
+idx, idy = 1, 0
+metric = 'TP'
+for ncolor, ener_var in enumerate(['CF']):
+    axs[idx, idy].plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs[idx, idy].set_ylabel('True Positives (DF detected, when ENS)')
+axs[idx, idy].set_xlabel("Percentile of top energy drought events")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 1, 1
+metric = 'TN'
+for ncolor, ener_var in enumerate(['CF']):
+    axs[idx, idy].plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs[idx, idy].set_ylabel('True Negatives (no DF detected, when no ENS)')
+axs[idx, idy].set_xlabel("Percentile of top energy drought events")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+idx, idy = 2, 0
+metric = 'FP'
+for ncolor, ener_var in enumerate(['CF']):
+    axs[idx, idy].plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs[idx, idy].set_ylabel('False Positives (DF detected, when no ENS)')
+axs[idx, idy].set_xlabel("Percentile of top energy drought events")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='lower right', framealpha=1)
+
+idx, idy = 2, 1
+metric = 'FN'
+for ncolor, ener_var in enumerate(['CF']):
+    axs[idx, idy].plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].fill_between(x, quantiles_dict[ener_var][metric][0], quantiles_dict[ener_var][metric][2], color=dt_colors[ncolor], alpha=0.5)
+    axs[idx, idy].plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    axs[idx, idy].plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs[idx, idy].set_ylabel('False Negatives (No DF detected, when ENS)')
+axs[idx, idy].set_xlabel("Percentile of top energy drought events")
+axs[idx, idy].yaxis.set_major_locator(MaxNLocator(integer=True))
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs[idx, idy].legend(facecolor="white", loc='upper right', framealpha=1)
+
+plt.tight_layout()
+#plt.show()
+
+plt.savefig(f"{path_to_plot}Validation/{figname}.{plot_format}", dpi=300)
+#plt.close()
+
+print(f"Saved {path_to_plot}Validation/{figname}.{plot_format}")
+
+#%%
+# ---------------------------------------------
+#  Plot only F
+# ---------------------------------------------
+
+# Load data
+stat_df = pickle.load(open(f"{path_to_plot}Plot_data/{figname}_stats.pkl", "rb"))
+
+x=stat_df[1].index.levels[0] # LWS Percentile thresholds (1-x = RL percentile thresholds)
+
+quantiles_dict = dict()
+min_dict = dict()
+max_dict = dict()
+for ener_var in ['CF']:
+    quantiles_dict[ener_var] = dict()
+    min_dict[ener_var] = dict()
+    max_dict[ener_var] = dict()
+    for metric in ['F', 'TP', 'TN', 'FP', 'FN']:
+        quantiles_dict[ener_var][metric] = np.quantile([stat_df[FOS].loc[(x, ener_var,  metric),(zone)] for FOS in range(1, 15+1)], [0.25, 0.5, 0.75], axis=0)
+        min_dict[ener_var][metric] = np.min([stat_df[FOS].loc[(x, ener_var,  metric),(zone)] for FOS in range(1, 15+1)], axis=0)
+        max_dict[ener_var][metric] = np.max([stat_df[FOS].loc[(x, ener_var,  metric),(zone)] for FOS in range(1, 15+1)], axis=0)
+
+# Percentile for peak F-score
+ener_var = 'CF'
+metric = 'F'
+F_max = quantiles_dict[ener_var][metric][1].max()
+p_max = x[quantiles_dict[ener_var][metric][1] == F_max][0]
+print(f"CF: F_max = {F_max}, p_max = {p_max}")
+
+fig, axs = plt.subplots(1, 1, figsize=(5, 4))
+axs.set_title(f'Li Method for {zone}')
+
+# Event time series
+metric = 'F'
+for ncolor, ener_var in enumerate(['CF']):
+    axs.plot(x, quantiles_dict[ener_var][metric][1], label=ener_var,  color=dt_colors[ncolor], alpha=0.8)
+    axs.fill_between(x, min_dict[ener_var][metric], max_dict[ener_var][metric], color=dt_colors[ncolor], alpha=0.5)
+    #axs.plot(x, min_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+    #axs.plot(x, max_dict[ener_var][metric], linestyle='dashed', color=dt_colors[ncolor], alpha=0.8)
+axs.set_ylabel('F-Score')
+axs.set_xlabel("Capacity factor threshold [GW/GW]")
+#axs[idx, idy].set_ylim(ymin-0.1*yabs, ymax+0.1*yabs)
+axs.legend(facecolor="white", loc='upper right', framealpha=1)
+axs.grid(axis='y')
 
 plt.tight_layout()
 #plt.show()
