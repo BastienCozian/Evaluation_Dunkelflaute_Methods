@@ -489,6 +489,240 @@ def detect_drought_Li21(scenarios, zones_szon, data_CF_h, thresh):
     return df_hours, df_events
 
 
+
+
+
+
+
+def find_successive_events_with_leap_years(df_input, time_col='Date'):
+    """
+    Identify successive hours in a dataframe of timestamps, handling leap year transitions, 
+    and compute the duration of each continuous event period.
+
+    Successive hours are defined as timestamps that occur exactly 1 hour apart.
+    Leap year transitions (e.g., from 'Feb 28' to 'Mar 1' in a leap year) are
+    treated as normal day-to-day transitions.
+
+    Args:
+        df (pd.DataFrame): A pandas dataframe with datetime index or a column of datetime values.
+        time_col (str): The name of the datetime column (if not the index). Defaults to 'Date'.
+
+    Returns:
+        pd.DataFrame: A dataframe with two columns:
+            - 'Startdate': The start time of each continuous period of successive hours.
+            - 'Duration': The number of successive hours in each period.
+    
+    Example:
+        >>> df = pd.DataFrame({
+                'Date': ['2024-02-28 23:00:00', '2024-03-01 00:00:00', '2024-03-01 01:00:00'],
+                'DE00': [True, True, True]
+            })
+        >>> find_successive_events_with_leap_years(df, 'Date')
+        Startdate              Duration
+        0 2024-02-28 23:00:00  3
+    
+    Notes:
+        - The function checks for transitions between 'Feb 28' and 'Mar 1' in leap years
+          and adjusts these differences to be treated as 1-hour transitions.
+        - Assumes the input dataframe is sorted by the datetime column.
+
+    """
+    df = df_input.copy()
+
+    # Convert the time_col to datetime if it's not the index
+    if time_col != df.index.name:
+        df[time_col] = pd.to_datetime(df[time_col])
+        df.set_index(time_col, inplace=True)
+
+    # Calculate the time difference between consecutive rows
+    df['time_diff'] = df.index.to_series().diff()
+
+    # Handle leap year transitions (from Feb 28 to Mar 1)
+    def adjust_leap_year_diff(df):
+        for i in range(1, len(df)):
+            current_date = df.index[i]
+            prev_date = df.index[i - 1]
+
+            # Check if the transition is from Feb 28 to Mar 1 in a leap year
+            if (prev_date.month == 2 and prev_date.day == 28 and 
+                current_date.month == 3 and current_date.day == 1 and 
+                prev_date.is_leap_year):
+                # Correct the time difference for leap year transition
+                df.loc[current_date, 'time_diff'] = pd.Timedelta(hours=1)
+
+        return df
+
+    # Apply leap year adjustment
+    df = adjust_leap_year_diff(df)
+
+    # Define successive periods (1 hour difference)
+    df['group'] = (df['time_diff'] != pd.Timedelta(hours=1)).cumsum()
+
+    # Group by the 'group' column
+    grouped = df.groupby('group')
+
+    # Create a result dataframe with start date and duration for each group
+    result = pd.DataFrame({
+        'Startdate': grouped.apply(lambda x: x.index.min(), include_groups=False),  # Start date is the minimum date in each group
+        'Duration': grouped.size()  # Duration is the number of rows in each group
+    }).reset_index(drop=True)
+
+    return result
+
+
+
+
+
+
+def detect_DF_Li21(df_CF_h, zone, thresh, wrt_mean=False):
+    """
+
+    Parameters
+    ----------
+
+    df_CF_h: DataFrame
+        Multi-index DataFrame of hourly capacity factor
+
+        Example:
+                                                    DE00
+        Technology Scenario Date                         
+        SPV        HIST     1982-01-01 00:00:00  0.000000
+                            1982-01-01 01:00:00  0.000000
+                            1982-01-01 02:00:00  0.000000
+                            1982-01-01 03:00:00  0.000000
+                            1982-01-01 04:00:00  0.000000
+        ...                                           ...
+        WON        HIST     2016-12-31 19:00:00  0.297262
+                            2016-12-31 20:00:00  0.301915
+                            2016-12-31 21:00:00  0.303360
+                            2016-12-31 22:00:00  0.290909
+                            2016-12-31 23:00:00  0.298991
+
+    zone: str
+        Zone name (e.g. 'DE00')
+
+    thresh: str
+        Threshold value for the capacity factor of all 3 technologies (SPV, WON, WOF)
+
+    wrt_mean: bool (defalut: False)
+        If False, the same threshold is used for all technologies. This method is used in Li et al. (2021).
+        If True, the threshold is a share of the mean capacity factor.
+        Kittel & Schill (2024) argue that this method gives a better relative weight to each technologies.
+
+    Return
+    ------
+
+    df_DF: DataFrame
+        Startdate: beginning of CF < threshold. Duration of the event (in hours)
+
+                    Startdate  Duration
+        0 1982-02-24 03:00:00         4
+        1 1982-02-24 17:00:00         4
+        2 1982-03-22 00:00:00         5
+        3 1982-05-21 19:00:00         3
+        4 1982-10-30 16:00:00         2
+        5 2024-02-28 23:00:00         2
+    """
+    if wrt_mean:
+        below_thresh = (df_CF_h.loc[('SPV', 'HIST')] < (df_CF_h.loc[('SPV', 'HIST')].mean() * thresh))  \
+                    * (df_CF_h.loc[('WON', 'HIST')] < (df_CF_h.loc[('WON', 'HIST')].mean() * thresh))  \
+                    * (df_CF_h.loc[('WOF', 'HIST')] < (df_CF_h.loc[('WOF', 'HIST')].mean() * thresh))
+    else:
+        below_thresh = (df_CF_h.loc[('SPV', 'HIST')] < thresh) \
+                     * (df_CF_h.loc[('WON', 'HIST')] < thresh) \
+                     * (df_CF_h.loc[('WOF', 'HIST')] < thresh)
+    # only hours < threshold 
+    hours_below_thresh = below_thresh[below_thresh[zone]]
+
+    # group these hours into a 
+    df_DF = find_successive_events_with_leap_years(hours_below_thresh)
+
+    return df_DF
+
+
+
+
+
+
+
+
+
+def mask_Li21(df_24h_events, zone, start_date='1982-01-01', end_date='2016-12-31'):
+    """
+    Mask of days with a dunkelflaute, based on the definition of Li et al (2021).
+    Dunkelflaute: if more than 24 consecutive hours with CF < threhold for the 3 technologies (SPV, WON, WOF).
+    We label a day as "dunkelflaute" with value 1 if CF < threshold for at least 12h.
+
+    Parameters
+    ----------
+
+    df_DF: DataFrame
+        Startdate: beginning of CF < threshold. Duration of the event (in hours)
+        
+        Example:
+                    Startdate  Duration
+        0 1982-02-24 03:00:00         4
+        1 1982-02-24 17:00:00         4
+        2 1982-03-22 00:00:00         5
+        3 1982-05-21 19:00:00         3
+        4 1982-10-30 16:00:00         2
+        5 2024-02-28 23:00:00         2
+    
+    start_date: date in format 'yyyy-mm-dd'
+
+    end_date: date in format 'yyyy-mm-dd'
+
+    Returns
+    -------
+
+    df_mask_DF: DataFrame
+        Days in a dunkelflaute event (=1) or not (=0)
+
+        Example:
+                    DE00
+        1982-01-01   0.0
+        1982-01-02   1.0
+        ...          ...
+        2016-12-31   0.0
+    """
+
+
+    # Build a Dataframe with value 1 if a dunkelflaute (DF) occurs on that date, 0 otherwize
+    date_range = pd.date_range(start=start_date, end=end_date)
+    # Remove February 29th from the date range
+    date_range = date_range[~((date_range.month == 2) & (date_range.day == 29))]
+    df_mask_DF = pd.DataFrame(np.zeros(len(date_range)), index=date_range, columns=[zone])
+
+    # loop over all the events lasting more than 24h
+    for startdate, total_duration in zip(df_24h_events['Startdate'], df_24h_events['Duration']):
+        duration = total_duration
+        # Get the index of the starting day
+        # Using the 'date_range' index of df_mask_DF -> no need to account for Feb 29th
+        DF_idx = df_mask_DF.index.get_loc(startdate.strftime('%Y-%m-%d'))
+        
+        if startdate.hour <= 12:
+            # if during the first day there is more than 12h below the threshold, label this day as dunkelflaute 
+            df_mask_DF.iloc[DF_idx] = 1
+
+        duration -= (24 - startdate.hour)
+
+        DF_idx += 1
+
+        while duration >= 12 :
+            # if in the following day there is more than 12h below the threshold, label this day as dunkelflaute 
+            df_mask_DF.iloc[DF_idx] = 1
+
+            duration -= 24
+            DF_idx += 1
+        
+    return df_mask_DF
+
+
+
+
+
+
+
 def lin_reg(x, y):
     ''' 
     Performs a linear regression (ignoring nans).

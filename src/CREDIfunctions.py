@@ -184,7 +184,7 @@ def Climatology_Hourly_Weekly_Rolling(InputDataSet, RollingWindow=9, calendar201
     RollingWindow : int
         Size of the rolling window (in WEEKS)
         If RollingWindow == 3, returns the mean of w-1, w, and w+1.
-        If RollingWindow == 4, returns the mean of w-1, w-2, w, w+1.
+        If RollingWindow == 4, returns the mean of w-2, w-1, w, w+1.
     
     calendar2018 : bool
         If True, use the calendar of 2018 to compute the day of the week (0=Monday, 6=Sunday)
@@ -377,6 +377,114 @@ def get_CREDI_events(df_data, zone, extreme_is_high=True, PERIOD_length_days=1, 
 
 
     return ds_CREDI_event, event_dates, event_values
+
+
+
+
+
+
+
+
+
+
+def mask_CREDI(event_dates, event_values, threshold, PERIOD_length_days, zone, extreme_is_high=True, 
+               start_date='1982-01-01', end_date='2016-12-31'):
+    """
+    The date of the CREDI events in event_dates are shifted by one day. 
+    Indeed, a 3-day CREDI event indexed at day 1982-01-04 is actually the average from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
+    Return the list of dates unshifted by one day, accouting for Feb 29th. 
+
+    Parameters
+    ----------
+
+    event_dates : list of Timestamp
+        Date of CREDI events ranked in decreasing (resp. increasing) order of the CREDI value 
+        for residual load and demand (resp. renewable energy production).
+        Note that a 3-day CREDI event at date 1982-01-04 is actually the average 
+        from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
+
+        Example: 
+        [Timestamp('2015-01-21 00:00:00'),
+         Timestamp('1997-12-23 00:00:00'),
+         ...
+        ]
+
+    event_values : list
+        CREDI values  ranked in decreasing (resp. increasing) order for residual load and demand 
+        (resp. renewable energy production).
+    
+    threshold: float
+        Threshold value, corresponding to a given percentile of the CREDI value distribution.
+    
+    PERIOD_length_days: int
+        Duration of CREDI events.
+
+    extreme_is_high : bool
+        True  -> extreme events have high value (e.g. demand, residual load)
+        False -> extreme events have low value (e.g. renewable production)
+    
+    start_date: date in format 'yyyy-mm-dd'
+
+    end_date: date in format 'yyyy-mm-dd'
+
+    Returns
+    -------
+    df_mask_DF: DataFrame
+        Days in a CREDI dunkelflaute event (=1) or not (=0)
+
+        Example:
+                    DE00
+        1982-01-01   0.0
+        1982-01-02   1.0
+        ...          ...
+        2016-12-31   0.0
+    """
+
+    # Take CREDI > threshold. They are the "Dunkelflaute" events
+    if extreme_is_high:
+        idx_above_thresh = np.sum(event_values > threshold)
+    else:
+        idx_above_thresh = np.sum(event_values < threshold)
+    #DF_values = event_values[:idx_above_thresh]
+    DF_dates = event_dates[:idx_above_thresh]
+    DF_dates_shift = []
+
+    # investingating DF and ENS dates only. This improves computational time
+    for DF_date in DF_dates:
+
+        # Shift the index of CREDI events by one day (CREDI from day 1 to day 3 is indexed at day 4)
+        DF_date = DF_date - dtime.timedelta(1)
+        
+        if (DF_date.month == 2) & (DF_date.day == 29):
+            print(f'Shift {DF_date} by one additionnal day to avoid Feb 29th')
+            DF_date = DF_date - dtime.timedelta(1)
+
+        DF_dates_shift.append(DF_date)
+    
+    # Build a Dataframe with value 1 if the date is in a CREDI event, 0 otherwize
+    date_range = pd.date_range(start=start_date, end=end_date)
+    # Remove February 29th from the date range
+    date_range = date_range[~((date_range.month == 2) & (date_range.day == 29))]
+    df_mask_DF = pd.DataFrame(np.zeros(len(date_range)), index=date_range, columns=[zone])
+
+    # Set to 1 the last day of the CREDI events
+    for DF_date in DF_dates_shift:
+        df_mask_DF.loc[DF_date] = 1
+        # If the CREDI event last more than 1 day then also set to 1 the other days of the event.
+        # This method ensures that there is no issue with Feb 29th
+        if PERIOD_length_days > 1:
+            DF_idx = df_mask_DF.index.get_loc(DF_date)
+            for d in range(1, PERIOD_length_days):
+                df_mask_DF.iloc[DF_idx - d] = 1
+
+    return df_mask_DF
+
+
+
+
+
+
+
 
 
 
