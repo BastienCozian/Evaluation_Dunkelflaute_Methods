@@ -68,8 +68,9 @@ tech_ens = ['SPV_','_20','_30']#,'_TAW_']
 ty = 2050 # 2030
 
 # Target Years
-ty_pecd3 = 2033
-ty_pecd4 = 2030
+ty_pecd3 = 2033 # 2025, 2026, 2030, 2033
+
+#ty_pecd4 = 2030
 
 scenarios = []
 scen_colors = []
@@ -144,7 +145,7 @@ zones_szon = SZON_available_PEMMDB
 # Sheets sometimes have different formats
 # Two formats:     short = Date, Hour, 1982, 1983, ..., 2016    AND     long = Date, Month, Day, Hour, 1981, 1983, ..., 2019
 
-file = 'DEMAND_Timeseries_2033.xlsx'
+file = f'DEMAND_Timeseries_{ty_pecd3}.xlsx'
 
 # Prepare the format of the dataframe
 time_index = pd.Series(np.zeros(35*365*24)) # 35 years * 365 days * 24 hours

@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from datetime import datetime, timedelta
+from itertools import combinations
+
 
 #%% PECD specific functions
 
@@ -884,3 +886,52 @@ def assign_SZON(input_pecd_zones, level):
     #    print(f'{a} -> {b}')
 
     return output_szon_zones
+
+
+
+
+
+
+
+
+
+
+def pairwise_comparison(rankings):
+    """
+    Perform pairwise comparisons to determine how many times each candidate wins.
+    """
+    # Get a set of all items
+    all_items = {item for ranking in rankings for item in ranking}
+    
+    # Initialize pairwise win counts
+    pairwise_wins = {item: {other: 0 for other in all_items if other != item} for item in all_items}
+    
+    # Perform pairwise comparisons
+    for item1, item2 in combinations(all_items, 2):
+        # Count preferences for item1 vs. item2
+        item1_wins = sum(ranking.index(item1) < ranking.index(item2) for ranking in rankings)
+        item2_wins = len(rankings) - item1_wins
+        
+        # Update win counts
+        if item1_wins > item2_wins:
+            pairwise_wins[item1][item2] += 1
+        elif item2_wins > item1_wins:
+            pairwise_wins[item2][item1] += 1
+
+    return pairwise_wins
+
+
+
+
+
+def condorcet_ranking(pairwise_wins):
+    """
+    Generate a ranking based on pairwise wins.
+    """
+    # Calculate total wins for each candidate
+    total_wins = {candidate: sum(wins > 0 for wins in opponents.values())
+                  for candidate, opponents in pairwise_wins.items()}
+    
+    # Sort candidates by total wins (descending)
+    ranking = sorted(total_wins.keys(), key=lambda x: -total_wins[x])
+    return ranking, total_wins
