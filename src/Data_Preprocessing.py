@@ -256,10 +256,10 @@ df = pd.DataFrame()
 list_dates = np.empty((0),dtype='datetime64[ns]')
 list_values = np.empty((0,len(eval_szon))) # dimensions: (date,szon)
 
-years_available = np.arange(1982,2016+1) # TODO: Change, when more is available
+years_available = np.arange(1982,2016+1)
 for y in range(len(years_available)):
     if years_available[y] == 2014:
-        # There is no file for 2014 at the moment. TODO: Update if 2014 is available.
+        # There is no file for 2014 at the moment. 
         # Current solution: add synthetic data with no ENS in 2014
         yy = y - 1
 

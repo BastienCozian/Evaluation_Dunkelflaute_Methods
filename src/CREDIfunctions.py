@@ -253,8 +253,6 @@ def get_CREDI_events(df_data, zone, extreme_is_high=True, PERIOD_length_days=1, 
     but can be computed based on Hourly Weekly Rolling Window (HWRW, not fully implemented yet, 
     see function `Climatology_Hourly_Weekly_Rolling`).
 
-    TODO: add the possibility to use "start_date" and "end_date". Apparently I first need to correct an issue in the code of Ben, 
-    but I can't remember what...
     /!\ WARNING /!\ -> Currently, we first compute the climatology based on all values to have a smooth definition 
     (the more data, the smoother) but this need to be accounted for when e.g. computing the percentile value.
     Moreover, this may not be appropriate when looking at at projection data when we want only e.g. the 2015-2045 period.
@@ -497,18 +495,6 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, PERIOD_cluste
     The date of the CREDI events in df_mask are shifted by one day. 
     Indeed, a 3-day CREDI event indexed at day 1982-01-04 is actually the average from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
 
-
-    TODO: Make sure that 2 successive ENS in the same event are counted as one.
-
-    TODO: make a proper choice to use a single zone or multiple zone. Currently no choice is made.
-
-    TODO: Check that I correctly take only one ENS if two ENS occur within 2 days on the same detected Dunkelflaute event
-
-    TODO: Not sure of the computation of true_negative, need to think more. Do not affect the computation of F-score. 
-    Use len(same_index) or number of DF events ?
-
-    TODO: implement the case where PERIOD_length_days != PERIOD_cluster_days
-
     Parameters
     ----------
     ens_mask : DataFrame
@@ -570,7 +556,6 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, PERIOD_cluste
     """
     Piece of code that may be useful later.
 
-    # TODO: ensure that it works for Demand (above threshold) and REP (below threshold)
     nb_event = np.sum(np.asarray(event_values) > threshold)
 
     # Date of the Dunkelflaute event (above/below threshold corresponding to percentile p)
@@ -606,8 +591,6 @@ def get_f_score_CREDI(ens_mask, df_mask, zone, PERIOD_length_days, PERIOD_cluste
             #id -= PERIOD_length_days   
 
             id -= PERIOD_cluster_days
-
-            # TODO: Possibility to sum their values later to compute the severity
             
             # Need to account for a special case: 
             # Check the remaining days of the Dunkelflaute events over the allowed overlapping period (PERIOD_length_days - PERIOD_cluster_days).
@@ -667,14 +650,6 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
 
     The dates of the Dunkelflaute event computed with the CREDI method are shifted by one day. 
     Indeed, a 3-day CREDI event indexed at day 1982-01-04 is actually the average from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
-
-
-    TODO: Make sure that 2 successive ENS in the same event are counted as one.
-
-    TODO: make a proper choice to use a single zone or multiple zone. Currently no choice is made.
-
-    TODO: Not sure of the computation of true_negative, need to think more. Do not affect the computation of F-score. 
-    Use len(same_index) or number of DF events ?
 
     Parameters
     ----------
@@ -739,9 +714,6 @@ def get_f_score_CREDI_new(df_ENS, event_dates, event_values, threshold, common_i
 
     '''
     Piece of code that may be useful later.
-
-    # TODO: ensure that it works for Demand (above threshold) and REP (below threshold)
-    nb_event = np.sum(np.asarray(event_values) > threshold)
 
     # Date of the Dunkelflaute event (above/below threshold corresponding to percentile p)
     # Take only the date on the same calendar period
@@ -851,8 +823,6 @@ def get_correlation_CREDI(df_ENS, event_dates, event_values, threshold, common_i
 
     The dates of the Dunkelflaute events computed with the CREDI method are shifted by one day. 
     Indeed, a 3-day CREDI event indexed at day 1982-01-04 is actually the average from 1982-01-01 T00:00:00 to 1982-01-03 T23:00:00.
-
-    TODO: make a proper choice to use a single zone or multiple zone. Currently no choice is made.
 
     Parameters
     ----------
@@ -1015,7 +985,6 @@ def compute_timeline(df_ENS, event_dates, event_values, threshold, zone, PERIOD_
     event_dates : list of Timestamp
         Date of CREDI event. CREDI events are 'Dunkelflaute' if value > threshold.
         For RL and DD (resp. LWS) ranked from highest to smallest CREDI value (resp. smallest to highest). 
-        TODO: check incrasing for LWS
 
     event_values : list of float
         CREDI value of Dunkelflaute events.

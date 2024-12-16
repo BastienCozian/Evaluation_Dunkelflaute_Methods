@@ -94,13 +94,6 @@ data3_CF_h  = data3_CF_crop[~((data3_CF_crop.index.get_level_values(2).day == 29
 data3_RL_h = data3_dem_h - w*data3_gen_h
 data4_RL_h = data4_dem_h - w*data4_gen_h
 
-# TODO: Need to correct the Preprocessing for hourly data (perhaps daily data?) of demand 
-# to account for 2016-12-31T01:00 à 2016-12-31T23:00. Currently, I believe that there is only 2016-12-31T00:00
-
-# TODO: Use the calendar method of ERAA 2023: calendar of 2018, remove last day of year instead of Feb 29th in leap years.
-# Why? -> 1) there is likely a 1-day shift in the ENS compared to energy variables once every four years
-#         2) Needed to correctly implement the method based on Hourly & Weekly Rolling Window
-
 
 # =================================================================
 # Load daily data
@@ -502,7 +495,7 @@ df_agg_old_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_
 
 
 # Generate masked data
-# TODO: Dirty -> I used an old piece of code, I should update that:
+# TODO: Dirty -> I used an old piece of code
 ens_mask = mask_data(df_agg_old_ENS_d, 0, False, 2, 0)
 common_index = df_agg_RL_h.index.intersection(ens_mask.index)
 

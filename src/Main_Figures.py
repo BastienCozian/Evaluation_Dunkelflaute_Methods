@@ -92,13 +92,6 @@ data3_CF_h  = data3_CF_crop[~((data3_CF_crop.index.get_level_values(2).day == 29
 data3_RL_h = data3_dem_h - w*data3_gen_h
 data4_RL_h = data4_dem_h - w*data4_gen_h
 
-# TODO: Need to correct the Preprocessing for hourly data (perhaps daily data?) of demand 
-# to account for 2016-12-31T01:00 à 2016-12-31T23:00. Currently, I believe that there is only 2016-12-31T00:00
-
-# TODO: Use the calendar method of ERAA 2023: calendar of 2018, remove last day of year instead of Feb 29th in leap years.
-# Why? -> 1) there is likely a 1-day shift in the ENS compared to energy variables once every four years
-#         2) Needed to correctly implement the method based on Hourly & Weekly Rolling Window
-
 
 # =================================================================
 # Load daily data
@@ -1427,35 +1420,6 @@ scenario_EVA = 'B'
 #agg_zone = 'CSA'; zones_list = ['PT00', 'ES00', 'BE00', 'FR00', 'NL00', 'DE00', 'DKW1', 'CH00', 'ITN1', 'ITCN', 'ITCS', 'ITS1', 'ITCA', 'ITSI', 'ITSA', 'PL00', 'CZ00', 'AT00', 'SI00', 'SK00', 'HU00', 'HR00', 'RO00', 'BA00', 'RS00', 'ME00', 'MK00', 'GR00', 'BG00']; p_max = 0.05  # (Part of) Continental Synchronous Area (based on available data). 'DKE1' is part of the Nordic Zone. No data for ['FR15', 'MD00', 'UA01', 'UA02', 'CR00', 'TR00'].
 
 
-# --- Old Percentile for peak F-score. Computed in `DF_Validation_Stoop.py` ---
-# FOR DE00
-#p_max = 0.014  #0.0136
-#p_max = 0.022  # TODO: check with new data
-#p_max = 0.0356 # TODO: check with new data
-#p_max = 0.044  # TODO: check with new data
-
-# FOR FR00
-#p_max = 0.0044
-#p_max = 0.026  # TODO: check with new data
-#p_max = 0.0276 # TODO: check with new data
-#p_max = 0.0204 # TODO: check with new data
-
-# FOR CWE
-#p_max = 0.014 # T=1
-#p_max = 0.038 # T=3
-#p_max = 0.07 # T=5
-#p_max = 0.136 # T=7
-
-# FOR NO
-#p_max = 0.0036 # T=1
-
-# FOR IT
-#p_max = 0.0284 # T=1
-
-# For PL00
-#p_max = 0.0084 # T=1
-
-
 figname = f"Correlation_ENSvsCREDI_ENS_Scenario{scenario_EVA}_{agg_zone}_T{PERIOD_length_days}_Tc{PERIOD_cluster_days}_pmax_{int(p_max*1000)}e-3"
 
 # ---------------------------------------------
@@ -1486,7 +1450,7 @@ df_agg_old_ENS_d[agg_zone] = pd.read_pickle(path_to_data+'ERAA23_old_ENS_TY2033_
 
 
 # Generate masked data
-# TODO: Dirty -> I used an old piece of code, I should update that:
+# TODO: Dirty -> I used an old piece of code
 ens_mask = mask_data(df_agg_old_ENS_d, 0, False, 2, 0)
 common_index = df_agg_RL_h.index.intersection(ens_mask.index)
 
