@@ -25,3 +25,7 @@ For questions, please contact bastien.cozian@rte-france.com or benjamin.biewald@
 ## Dependencies
 
 Use ``conda env create -f environment.yml`` to install this project's dependencies and create the ``dunkelflaute_analysis`` conda-environment.
+
+## Data
+
+Energy Not Served (ENS) data: https://www.entsoe.eu/outlooks/eraa/2023/eraa-downloads/
