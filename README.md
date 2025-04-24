@@ -28,4 +28,4 @@ Use ``conda env create -f environment.yml`` to install this project's dependenci
 
 ## Data
 
-Energy Not Served (ENS) and renewable energy production and demand hourly data at national level: https://www.entsoe.eu/outlooks/eraa/2023/eraa-downloads/
+Energy Not Served (ENS) and renewable energy production and demand hourly data at national level: https://www.entsoe.eu/eraa/2023/downloads/
